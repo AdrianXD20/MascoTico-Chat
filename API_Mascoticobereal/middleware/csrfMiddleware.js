@@ -30,7 +30,6 @@ function csrfProtection(req, res, next) {
         return res.status(403).json({ error: 'CSRF token expirado' });
     }
 
-    csrfTokens.delete(token);
     next();
 }
 
