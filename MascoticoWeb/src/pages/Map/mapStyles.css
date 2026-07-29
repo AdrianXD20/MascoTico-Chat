@@ -1,0 +1,68 @@
+@import "mapbox-gl/dist/mapbox-gl.css";
+
+.map-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.map-marker {
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  transition: transform 0.2s ease;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.25));
+}
+
+.map-marker:hover {
+  transform: scale(1.15);
+}
+
+.map-marker.selected {
+  transform: scale(1.25);
+  filter: drop-shadow(0 6px 12px rgba(0, 139, 134, 0.5));
+}
+
+.map-user-marker {
+  width: 18px;
+  height: 18px;
+  background: #3b82f6;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.map-loading-pulse {
+  animation: mapPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes mapPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.95); }
+}
+
+.map-sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.map-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #008B86;
+  border-radius: 4px;
+}
+
+.map-glass {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.map-glass-dark {
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}

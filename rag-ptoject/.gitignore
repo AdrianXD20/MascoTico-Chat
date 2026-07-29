@@ -1,0 +1,32 @@
+# Entorno virtual de Python
+venv/
+.venv/
+env/
+ENV/
+
+# Archivos compilados de Python
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Bases de datos locales y archivos temporales de SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# Base de datos vectorial de Chroma (almacenamiento local)
+chroma_db/
+src/chroma_db/
+
+# Variables de entorno y secretos (claves de API, etc.)
+.env
+.env.local
+
+# Archivos de configuración del IDE (opcional, pero recomendado)
+.vscode/
+.idea/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db

@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: mascotico-api
+    runtime: node
+    repo: https://github.com/AdrianXD20/MascoTico-Chat
+    rootDir: API_Mascoticobereal
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: PYTHON_API_URL
+        sync: false
+      - key: secretKey
+        sync: false
+      - key: db_host
+        sync: false
+      - key: db_name
+        sync: false
+      - key: db_password
+        sync: false
+      - key: db_user
+        sync: false
+      - key: email
+        sync: false
+      - key: email_password
+        sync: false
+      - key: RECAPTCHA_SECRET_KEY
+        sync: false
+      - key: RECAPTCHA_SITE_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

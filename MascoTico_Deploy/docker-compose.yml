@@ -1,0 +1,48 @@
+services:
+  frontend:
+    build: ../MascoticoWeb
+    ports:
+      - "5173:80"
+    depends_on:
+      backend-node:
+        condition: service_started
+
+  backend-node:
+    build: ../API_Mascoticobereal
+    ports:
+      - "3000:3000"
+    environment:
+      - PYTHON_API_URL=http://backend-python:8000
+      - DB_HOST=${db_host}
+      - DB_USER=${db_user}
+      - DB_PASSWORD=${db_password}
+      - DB_NAME=${db_name}
+    depends_on:
+      backend-python:
+        condition: service_healthy
+
+  backend-python:
+    build: ../rag-ptoject
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - DB_HOST=${db_host}
+      - DB_USER=${db_user}
+      - DB_PASSWORD=${db_password}
+      - DB_NAME=${db_name}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - sessions_data:/app/sessions
+      - chroma_data:/app/chroma_db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=5).read()"]
+      interval: 20s
+      timeout: 10s
+      retries: 12
+      start_period: 120s
+
+volumes:
+  sessions_data:
+  chroma_data:

@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Configuración del mapa */
+body {
+  color: #404040;
+  font: 400 15px/22px 'Source Sans Pro', 'Helvetica Neue', sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.sidebar {
+  position: absolute;
+  width: 33.333%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  overflow: auto;
+  border-right: 1px solid rgba(0, 0, 0, 0.25);
+  background: white;
+}
+
+.map {
+  position: absolute;
+  left: 33.333%;
+  width: 66.666%;
+  top: 0;
+  bottom: 0;
+}
+
+h1 {
+  font-size: 22px;
+  margin: 0;
+  font-weight: 400;
+  padding: 20px 2px;
+}
+
+a {
+  color: #404040;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #101010;
+}
+
+.listings {
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: 60px;
+}
+
+.listings .item {
+  border-bottom: 1px solid #eee;
+  padding: 10px;
+}
+
+.listings .item .title {
+  color: #00853e;
+  font-weight: 700;
+}
+
+.listings .item .title:hover {
+  color: #8cc63f;
+}
+
+.marker {
+  cursor: pointer;
+  height: 56px;
+  width: 56px;
+  background-image: url('https://docs.mapbox.com/demos/building-a-store-locator/marker.png');
+}

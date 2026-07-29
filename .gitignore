@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+
+# Uploaded images
+images/
+
+# Pentest / testing artifacts
+body_*.json
+login_*.json
+out_*.json
+put_*.json
+token_*.txt
+nosqli.json
+sqli.json
+agent_chat_*.json
+analyze_bundle.py
+find_endpoints.py
+bundle.js
+security-audit-*.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
