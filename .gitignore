@@ -8,7 +8,7 @@ node_modules/
 images/
 
 # Pentest / testing artifacts
-body_*.json
+body*.json
 login_*.json
 out_*.json
 put_*.json
@@ -20,6 +20,9 @@ analyze_bundle.py
 find_endpoints.py
 bundle.js
 security-audit-*.md
+
+# Database dumps
+*.sql
 
 # OS files
 .DS_Store

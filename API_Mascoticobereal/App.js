@@ -64,12 +64,16 @@ const allowed = [
     'http://localhost:5174',
     'https://api-mascoticos.onrender.com',
     'https://api-mascoticobereal.onrender.com',
+    'https://mascotico-chat-web.onrender.com',
+    'https://mascotico-chat.onrender.com',
     'https://talismanical-wormy-tonisha.ngrok-free.dev',
     /*IP de Alexander*/
     'http://192.168.0.104:8081',/*IP de Frenks*/
     'https://mascotico-luna.vercel.app',/*MascoTico WEB*/
     'https://mascotico-luna-pjzx81ixt-alexyah064s-projects.vercel.app', /*Front de Admin */
     'https://mascotico-web.vercel.app',
+    'https://mascotico-chat-web.onrender.com',
+    'https://mascotico-chat.onrender.com',
 ];
 
 app.use(cors({
