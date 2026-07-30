@@ -12,7 +12,7 @@ const options = {
 
         servers: [
             {
-                url: "https://talismanical-wormy-tonisha.ngrok-free.dev"
+                url: "https://mascotico-chat.onrender.com"
             },
             {
                 url: "http://localhost:3000"

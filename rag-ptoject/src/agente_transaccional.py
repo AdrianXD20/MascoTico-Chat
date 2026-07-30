@@ -379,6 +379,22 @@ def _resolver_id_veterinario(arguments: dict, historial: list[dict]) -> int | No
     return None
 
 
+def _verificar_confirmacion_compra(historial: list[dict]) -> bool:
+    """Verifica si el usuario ha confirmado explícitamente la compra
+    en sus últimos mensajes. Evita compras no intencionales."""
+    confirmacion_keywords = [
+        "confirmo", "sí", "si", "simón", "simon", "dale", "adelante",
+        "cómpralo", "compralo", "compra", "cómpramelo", "comparamelo",
+        "ok", "okay", "sale", "vamos", "ándale", "andale", "listo",
+    ]
+    for msg in reversed(historial[-10:]):
+        if msg.get("role") == "user":
+            content = (msg.get("content") or "").strip()
+            if any(p in content.lower() for p in confirmacion_keywords):
+                return True
+    return False
+
+
 def _ejecutar_herramienta(fn_name: str, arguments: dict, user_id: int, historial: list[dict]) -> dict | list:
     if fn_name not in AVAILABLE_FUNCTIONS:
         return {"error": f"Función '{fn_name}' no encontrada"}
@@ -401,6 +417,14 @@ def _ejecutar_herramienta(fn_name: str, arguments: dict, user_id: int, historial
 
     if fn_name == "realizar_compra":
         arguments["id_usuario"] = user_id
+        if not _verificar_confirmacion_compra(historial):
+            print("[AgenteTransaccional] ⚠️  Compra no confirmada por el usuario — solicitando confirmación")
+            return {
+                "error": (
+                    "No puedo procesar la compra sin tu confirmación explícita. "
+                    "Por favor responde 'confirmo' para autorizar la compra."
+                )
+            }
 
     return AVAILABLE_FUNCTIONS[fn_name](**arguments)
 

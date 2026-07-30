@@ -23,6 +23,7 @@ from guard import (
     detectar_inyeccion,
     sanitizar_mensaje,
     validar_tool_call,
+    moderar_contenido,
     detectar_leak_system_prompt,
     sanitizar_respuesta,
 )
@@ -246,6 +247,27 @@ def chat(request: Request, req: ChatRequest):
         print(f"[Guard] ⚠️  Intento de inyección detectado: {patrones}")
         # Neutralizar el mensaje
         req.mensaje = sanitizar_mensaje(req.mensaje)
+
+    # ── CAPA 1.5: LÍMITE DE LONGITUD ───────────
+    if len(req.mensaje) > 2000:
+        return ChatResponse(
+            conversation_id=req.conversation_id or "",
+            respuesta="Lo siento, el mensaje es demasiado largo. Por favor escribe un mensaje más corto (máximo 2000 caracteres).",
+            es_nueva_sesion=False,
+            agente_usado="fuera_dominio",
+        )
+
+    # ── CAPA 1.6: MODERACIÓN DE CONTENIDO ───────
+    es_aceptable, razon = moderar_contenido(req.mensaje)
+    if not es_aceptable:
+        print(f"[Guard] ⚠️  Contenido bloqueado: {razon}")
+        conversation_id = req.conversation_id or nueva_conversacion(req.get_user_id()) if req.get_user_id() else None
+        return ChatResponse(
+            conversation_id=conversation_id or "",
+            respuesta=f"Lo siento, no puedo procesar mensajes con {razon}. Por favor mantén un lenguaje respetuoso y apropiado.",
+            es_nueva_sesion=False,
+            agente_usado="fuera_dominio",
+        )
 
     # ── Resolver ID del usuario ──────────────────
     user_id = req.get_user_id()

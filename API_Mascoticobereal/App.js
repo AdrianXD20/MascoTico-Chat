@@ -32,6 +32,8 @@ app.disable('x-powered-by');
 
 app.use((req, res, next) => {
   res.removeHeader('ngrok-agent-ips');
+  res.removeHeader('x-render-origin-server');
+  res.removeHeader('X-Powered-By');
   next();
 });
 
@@ -141,6 +143,13 @@ const limiterListados = rateLimit({
   message: { message: "Demasiadas solicitudes. Intenta de nuevo en 15 minutos." },
 });
 
+// Límite específico para el chat (evita DoS por saturación del LLM)
+const limiterChat = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { message: "Demasiadas solicitudes al chat. Espera un momento antes de enviar otro mensaje." },
+});
+
 // Body parsers antes de rate limiters para poder leer req.body.email en el keyGenerator
 app.use(express.json());
 app.use(body.urlencoded({ extended: false }));
@@ -152,7 +161,7 @@ app.use('/veterinario/login', limiterLogin);
 app.use('/register', limiterRegistro);
 app.use('/refresh', limiterRefresh);
 app.use('/veterinario/refresh', limiterRefresh);
-app.get('/csrf-token', limiterCsrf, generateToken);
+app.get('/csrf-token', limiterCsrf, verifyToken, generateToken);
 
 // Rate limiters para endpoints de escritura y listados
 app.use('/mascotas', (req, res, next) => {
@@ -186,6 +195,10 @@ app.use('/', userController);
 app.use('/', ventasRoutes);
 app.use('/', blogsRoutes)
 app.use('/',disponibilidadRoutes)
+app.use('/chat', (req, res, next) => {
+  if (req.method === 'POST') return limiterChat(req, res, next);
+  next();
+});
 app.use('/', chatRoutes)
 
 // Catch JSON parse errors sin exponer stack traces

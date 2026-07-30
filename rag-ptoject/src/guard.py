@@ -1,6 +1,6 @@
 """
 Guard: sistema de defensa multicapa contra prompt injection.
-- Capa 1: Sanitización de entrada (detecta y neutraliza patrones de inyección)
+- Capa 1: Sanitización de entrada (detecta y neutraliza patrones de inyección + moderación de contenido)
 - Capa 2: Validación de herramientas (verifica parámetros antes de ejecutar)
 - Capa 3: Guard de salida (detecta fuga de system prompt)
 """
@@ -212,6 +212,31 @@ SYSTEM_PROMPT_LEAK_PATTERNS = [
 ]
 
 SYSTEM_PROMPT_LEAK_COMPILED = [re.compile(p) for p in SYSTEM_PROMPT_LEAK_PATTERNS]
+
+
+# ─────────────────────────────────────────────
+# MODERACIÓN DE CONTENIDO (ofensivo/peligroso)
+# ─────────────────────────────────────────────
+
+MODERACION_BLOQUEOS = [
+    (r"(?i)(?:suicid[io]|matar[ae]?|morir|muerte)", "contenido violento/autolesión"),
+    (r"(?i)(?:droga[ds]?|narcótico[as]?|cocaína|marihuana|weed|hookah|vape[ea]r?)", "contenido sobre drogas"),
+    (r"(?i)(?:arma[ds]?|bomba[ds]?|explosivo[as]?|pistola|rifle|cuchillo[as]?)", "contenido sobre armas"),
+    (r"(?i)(?:hackea[rt]?|virus|malware|ransomware|phishing|roba[rt]?\s*(?:cuenta|contraseña))", "contenido malicioso/hacking"),
+    (r"(?i)(?:porno?|xxx|contenido\s*para\s*adultos)", "contenido para adultos"),
+    (r"(?i)(?:put[ao]|pendej[ao]|ching[au]|cabr[óo]n|verga[ds]?|mierda[ds]?|cul[ao]|pito[as]?|chup[ae])", "lenguaje ofensivo"),
+]
+
+
+def moderar_contenido(texto: str) -> tuple[bool, str | None]:
+    """Modera el contenido del mensaje del usuario.
+    Retorna (es_aceptable: bool, razon: str | None)."""
+    if not texto:
+        return True, None
+    for pattern, razon in MODERACION_BLOQUEOS:
+        if re.search(pattern, texto):
+            return False, razon
+    return True, None
 
 
 def detectar_leak_system_prompt(respuesta: str) -> bool:

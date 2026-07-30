@@ -4,7 +4,13 @@ class mascotasServices {
   
   _sanitizar(valor) {
     if (typeof valor !== 'string') return valor;
-    return valor.replace(/<[^>]*>/g, '').replace(/[<>]/g, '');
+    return valor
+      .replace(/<[^>]*>/g, '')
+      .replace(/[<>]/g, '')
+      .replace(/on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
+      .replace(/javascript\s*:/gi, '')
+      .replace(/expression\s*\(/gi, '')
+      .replace(/data:\s*text\/html/gi, '');
   }
 
   _sanitizarObjeto(obj) {
