@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const { check, validationResult } = require('express-validator');
 const upload = require('../middleware/cloudinary').upload;
 
 const authService = require('../Services/authService.js');
@@ -10,6 +9,8 @@ const { verifyToken, revocarToken  } = require('../middleware/authMiddleware.js'
 const { verifyCaptcha } = require('../middleware/captchaMiddleware');
 const { csrfProtection } = require('../middleware/csrfMiddleware');
 const { verifyRol } = require('../middleware/verifyRol');
+const { usuarioRegistro, usuarioLogin } = require('../middleware/validators');
+const auditLog = require('../Services/auditLog');
 
 
 const userRepository = new UserRepository();
@@ -25,6 +26,7 @@ const userController = new UsuarioController(userService)
 router.post('/logout', verifyToken, verifyRol, async (req, res) => {
     revocarToken(req.token);
     await userService.revocarRefreshTokens(req.user.id);
+    auditLog.log('logout', { user_id: req.user.id, email: req.user.email });
     res.json({ message: 'Sesión cerrada correctamente' });
 });
 
@@ -34,7 +36,7 @@ router.post('/logout', verifyToken, verifyRol, async (req, res) => {
  *   post:
  *     summary: Registra un nuevo usuario.
  */
-router.post('/register', csrfProtection, verifyCaptcha, upload.single('imagen_perfil'),(req,res) => userController.crearUsuario(req,res));
+router.post('/register', csrfProtection, verifyCaptcha, usuarioRegistro, upload.single('imagen_perfil'),(req,res) => userController.crearUsuario(req,res));
 
 /**
  * @swagger
@@ -42,7 +44,7 @@ router.post('/register', csrfProtection, verifyCaptcha, upload.single('imagen_pe
  *   post:
  *     summary: Inicia sesión un usuario.
  */
-router.post('/login', csrfProtection, (req,res)=> userController.login(req,res));
+router.post('/login', csrfProtection, usuarioLogin, (req,res)=> userController.login(req,res));
 
 router.post('/refresh', csrfProtection, async (req, res) => {
   try {

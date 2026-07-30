@@ -6,6 +6,7 @@ const { verifyCaptcha } = require('../middleware/captchaMiddleware');
 const { csrfProtection } = require('../middleware/csrfMiddleware');
 const rateLimit = require('express-rate-limit');
 const Upload = require ('../middleware/multer')
+const { veterinarioRegistro, veterinarioLogin } = require('../middleware/validators');
 
 const VeterinarioController= require('../Controllers/veterinariosController');
 const VeterinarioService= require('../Services/veterinariosServices');
@@ -173,7 +174,7 @@ router.get('/veterinario/:id', verifyToken, verifyRol, isAdmin, (req, res) => ve
  *       400:
  *         description: Error en la solicitud de creación
  */
-router.post('/veterinario/register', csrfProtection, verifyCaptcha, limiterVetRegistro, (req, res) => veterinariosController.crearVeterinario(req, res));
+router.post('/veterinario/register', csrfProtection, verifyCaptcha, veterinarioRegistro, limiterVetRegistro, (req, res) => veterinariosController.crearVeterinario(req, res));
 
 /**
  * @swagger
@@ -221,7 +222,7 @@ router.post('/veterinario/register', csrfProtection, verifyCaptcha, limiterVetRe
  *                   type: string
  *                   description: Mensaje de error
  */
-router.post('/veterinario/login', csrfProtection, verifyCaptcha, limiterVetLogin, (req, res) => veterinariosController.loginVeterinario(req,res));
+router.post('/veterinario/login', csrfProtection, verifyCaptcha, veterinarioLogin, limiterVetLogin, (req, res) => veterinariosController.loginVeterinario(req,res));
 
 router.post('/veterinario/logout', verifyToken, verifyRol, async (req, res) => {
     const { revocarToken } = require('../middleware/authMiddleware');

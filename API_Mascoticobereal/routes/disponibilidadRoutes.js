@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/authMiddleware');
 const disponibilidadController = require('../Controllers/disponibilidadController');
+const { disponibilidadCrear } = require('../middleware/validators');
 
 /**
  * @swagger
@@ -49,7 +50,7 @@ const disponibilidadController = require('../Controllers/disponibilidadControlle
  *       400:
  *         description: Error en los datos
  */
-router.post('/disponibilidad', verifyToken, disponibilidadController.definirDisponibilidad);
+router.post('/disponibilidad', verifyToken, disponibilidadCrear, disponibilidadController.definirDisponibilidad);
 
 /**
  * @swagger

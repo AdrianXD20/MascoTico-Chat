@@ -4,6 +4,7 @@ const MascotaController = require('../Controllers/mascotasController');
 const MascotaService = require('../Services/mascotasServices');
 const MascotaRepository = require('../Repositories/mascotasRepository');
 const { verifyToken } = require('../middleware/authMiddleware');
+const { mascotaCrear, mascotaActualizar } = require('../middleware/validators');
 
 const mascotasRepository = new MascotaRepository();
 const mascotaService = new MascotaService(mascotasRepository);
@@ -121,7 +122,7 @@ router.get('/mascotas/:id', verifyToken, (req, res) => mascotasController.obtene
  *       400:
  *         description: Error en la solicitud
  */
-router.post('/mascotas', verifyToken, (req, res) => mascotasController.crearMascotas(req, res));
+router.post('/mascotas', verifyToken, mascotaCrear, (req, res) => mascotasController.crearMascotas(req, res));
 
 /**
  * @swagger
@@ -152,7 +153,7 @@ router.post('/mascotas', verifyToken, (req, res) => mascotasController.crearMasc
  *       404:
  *         description: Mascota no encontrada
  */
-router.put('/mascotas/:id', verifyToken, (req, res) => mascotasController.actualizarMascotas(req, res));
+router.put('/mascotas/:id', verifyToken, mascotaActualizar, (req, res) => mascotasController.actualizarMascotas(req, res));
 
 /**
  * @swagger

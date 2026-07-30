@@ -1,3 +1,5 @@
+const auditLog = require('../Services/auditLog');
+
 class ventaController{
     constructor(ventaService) {
         this.ventaService = ventaService
@@ -40,6 +42,7 @@ class ventaController{
         try{
             const nuevaVenta= req.body;
             const venta= await this.ventaService.crearVenta(nuevaVenta);
+            auditLog.log('venta_creada', { user_id: req.user?.id, ip: req.ip });
             res.status(200).json(venta)
 
         }catch(error){

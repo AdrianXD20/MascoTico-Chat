@@ -1,3 +1,5 @@
+const auditLog = require('../Services/auditLog');
+
 class UsuarioController{
     constructor(userService){
         this.userService = userService;
@@ -5,30 +7,12 @@ class UsuarioController{
 
     async crearUsuario(req, res) {
       try {
-          const { email, contraseña, nombre } = req.body;
-
-          if (!email || !contraseña || !nombre) {
-              return res.status(400).json({ message: 'Faltan campos obligatorios' });
-          }
-
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(email)) {
-              return res.status(400).json({ message: 'El correo electrónico no es válido' });
-          }
-
-          if (contraseña.length < 8) {
-              return res.status(400).json({ message: 'La contraseña debe tener al menos 8 caracteres' });
-          }
-
-          const existeUsuario = await this.userService.buscarPorEmail(email);
-          if (existeUsuario) {
-              return res.status(409).json({ message: 'Este correo ya está registrado' });
-          }
-
+          const { email, nombre } = req.body;
           const imagenURL = req.file ? req.file.path : null;
           const nuevoUsuario = { ...req.body, imagen_perfil: imagenURL };
 
           const User = await this.userService.crearUsuario(nuevoUsuario);
+          auditLog.log('register', { email, nombre, ip: req.ip });
           return res.status(201).json(User);
       } catch (error) {
           console.error('Error creando nuevo Usuario:', error);
@@ -37,15 +21,12 @@ class UsuarioController{
   }
       async login(req, res) {
         try {
-            const { email, contraseña } = req.body;
-            if (!email || !contraseña) {
-                return res.status(400).json({ message: 'Faltan campos obligatorios' });
-            }
-    
-            const { JWT, refreshToken, user } = await this.userService.login(email, contraseña);
+            const { email } = req.body;
+            const { JWT, refreshToken, user } = await this.userService.login(email, req.body.contraseña);
+            auditLog.log('login_exitoso', { email, user_id: user.id, ip: req.ip });
             res.status(200).json({ JWT, refreshToken, user });
         } catch (error) {
-            console.error('Error al logear el usuario :', error);
+            auditLog.log('login_fallido', { email: req.body?.email, ip: req.ip, motivo: error.message });
             res.status(401).json({ message: 'Credenciales inválidas' });
         }
     }

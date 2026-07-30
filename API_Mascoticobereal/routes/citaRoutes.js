@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-// 🚨 CORRECCIÓN: Ruta del archivo en minúscula para evitar fallos en Node y asegurar la lectura
 const CitasController = require('../Controllers/citaController');
 const { verifyToken } = require('../middleware/authMiddleware');
+const { citaCrear, citaEstado } = require('../middleware/validators');
 
 /**
  * @swagger
@@ -57,7 +57,7 @@ const { verifyToken } = require('../middleware/authMiddleware');
  * 400:
  * description: Error en los datos proporcionados
  */
-router.post('/citas', verifyToken, CitasController.agendarCita);
+router.post('/citas', verifyToken, citaCrear, CitasController.agendarCita);
 
 /**
  * @swagger
@@ -93,7 +93,7 @@ router.post('/citas', verifyToken, CitasController.agendarCita);
  * 404:
  * description: Cita no encontrada
  */
-router.put('/citas/:id', verifyToken, CitasController.actualizarEstadoCita);
+router.put('/citas/:id', verifyToken, citaEstado, CitasController.actualizarEstadoCita);
 
 /**
  * @swagger

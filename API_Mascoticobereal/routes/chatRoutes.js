@@ -3,19 +3,35 @@ const router = express.Router();
 const multer = require('multer');
 const { verifyToken } = require('../middleware/authMiddleware');
 const chatController = require('../Controllers/chatController');
+const { chatMensaje } = require('../middleware/validators');
 
 // Configuración de Multer para manejar el audio en memoria
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('audio/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Solo archivos de audio son permitidos'), false);
+    if (!file.mimetype.startsWith('audio/')) {
+      return cb(new Error('Solo archivos de audio son permitidos'), false);
     }
+    cb(null, true);
   }
 });
+
+// Middleware para validar magic bytes de audio
+function verificarMagicBytesAudio(req, res, next) {
+  if (!req.file) return next();
+  const buffer = req.file.buffer;
+  if (!buffer || buffer.length < 4) {
+    return res.status(400).json({ error: 'Archivo de audio inválido' });
+  }
+  const header = buffer.slice(0, 4).toString('hex');
+  const formatosAudio = ['52494646', 'fff', '4f676753', '664c6143']; // WAVE/RIFF, MP3, OGG, FLAC
+  const esValido = formatosAudio.some(f => header.startsWith(f));
+  if (!esValido) {
+    return res.status(400).json({ error: 'El archivo no es un formato de audio válido' });
+  }
+  next();
+}
 
 /**
  * @swagger
@@ -61,7 +77,7 @@ const upload = multer({
  * 500:
  * description: Error del agente de IA
  */
-router.post('/chat', verifyToken, chatController.enviarMensaje);
+router.post('/chat', verifyToken, chatMensaje, chatController.enviarMensaje);
 
 /**
  * @swagger
@@ -140,6 +156,6 @@ router.delete('/chat/conversaciones/:conversation_id', verifyToken, chatControll
  * 500:
  * description: Error al transcribir
  */
-router.post('/chat/transcribir', verifyToken, upload.single('audio'), chatController.transcribirAudio);
+router.post('/chat/transcribir', verifyToken, upload.single('audio'), verificarMagicBytesAudio, chatController.transcribirAudio);
 
 module.exports = router;

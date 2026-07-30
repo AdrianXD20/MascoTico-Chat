@@ -1,8 +1,10 @@
 const citaService = require('../Services/citasServices');
+const auditLog = require('../Services/auditLog');
 
 exports.agendarCita = async (req, res) => {
     try {
         const cita = await citaService.agendarCita(req.body);
+        auditLog.log('cita_creada', { user_id: req.user?.id, cita_id: cita?.id, veterinario_id: req.body.id_veterinario, ip: req.ip });
         res.status(201).json({ message: 'Cita registrada', cita });
     } catch (error) {
         res.status(400).json({ error: 'Error al agendar la cita' });

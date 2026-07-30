@@ -6,7 +6,8 @@ const ProductoRepository = require('../Repositories/productoRepository');
 const rateLimit = require('express-rate-limit');
 
 const upload = require('../middleware/cloudinary').upload;
-const { verifyToken, isAdmin } = require('../middleware/authMiddleware'); // 👈 ajusta el path si tu archivo se llama distinto
+const { verifyToken, isAdmin } = require('../middleware/authMiddleware');
+const { productoCrear } = require('../middleware/validators'); // 👈 ajusta el path si tu archivo se llama distinto
 
 const productoRepository = new ProductoRepository();
 const productoService = new ProductoService(productoRepository);
@@ -43,7 +44,7 @@ router.get('/productos/:id', (req, res) => productoController.obtenerProductoPor
  * summary: Crear un nuevo producto con imagen
  */
 // 🔒 Solo admin puede crear productos
-router.post('/productos', verifyToken, isAdmin, upload.single('imagen'), (req, res) => productoController.crearProducto(req, res));
+router.post('/productos', verifyToken, isAdmin, productoCrear, upload.single('imagen'), (req, res) => productoController.crearProducto(req, res));
 
 /**
  * @swagger

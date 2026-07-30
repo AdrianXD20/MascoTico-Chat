@@ -6,6 +6,7 @@ const db = require('../database/conexion');
 const VentaService = require('../Services/ventasServices');
 const VentaRepository = require('../Repositories/ventasRepository');
 const VentaController = require('../Controllers/ventasController');
+const { ventaCrear } = require('../middleware/validators');
 
 const ventaRepository = new VentaRepository(db);
 const ventaService = new VentaService(ventaRepository);
@@ -16,7 +17,7 @@ router.get('/ventas/usuario/:id_usuario', verifyToken, (req, res) => ventaContro
 
 router.get('/ventas', verifyToken, isAdmin, (req, res) => ventaController.obtenerVentas(req, res));
 router.get('/ventas/:id', verifyToken, isAdmin, (req, res) => ventaController.obtenerVentaPorId(req, res));
-router.post('/ventas', verifyToken, (req, res) => ventaController.crearVenta(req, res));
+router.post('/ventas', verifyToken, ventaCrear, (req, res) => ventaController.crearVenta(req, res));
 router.put('/ventas/:id', verifyToken, (req, res) => ventaController.actualizarVenta(req, res));
 router.delete('/ventas/:id', verifyToken, (req, res) => ventaController.eliminarVenta(req, res));
 

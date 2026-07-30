@@ -8,6 +8,7 @@ const upload = require ('../middleware/multer')
 */
 
 const upload = require ('../middleware/cloudinary').upload;
+const { blogCrear } = require('../middleware/validators');
 const blogService = new BlogsService()
 const blogController = new BlogControlller(blogService)
 
@@ -140,7 +141,7 @@ router.get('/blogs/:id', (req,res) => blogController.obtenerBlogPorId(req,res));
  *       400:
  *         description: Error en la solicitud
  */
-router.post('/blogs', verifyToken,isAdmin, upload.single('imagen'), (req,res)=> blogController.crearBlog(req,res));
+router.post('/blogs', verifyToken, isAdmin, blogCrear, upload.single('imagen'), (req,res)=> blogController.crearBlog(req,res));
 
 /**
  * @swagger
