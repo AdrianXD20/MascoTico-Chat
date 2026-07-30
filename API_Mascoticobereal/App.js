@@ -78,7 +78,7 @@ const allowed = [
 
 app.use(cors({
     origin: function (origin, callback) {
-        if (allowed.indexOf(origin) !== -1) {
+        if (!origin || allowed.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
             callback(new Error('No permitido por CORS'));
@@ -165,7 +165,7 @@ app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     return res.status(400).json({ error: 'JSON inválido en el cuerpo de la solicitud' });
   }
-  next();
+  next(err);
 });
 
 const PORT = process.env.PORT;
