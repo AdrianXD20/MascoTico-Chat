@@ -409,7 +409,7 @@ def _ejecutar_herramienta(fn_name: str, arguments: dict, user_id: int, historial
 # FUNCIÓN PRINCIPAL DEL AGENTE
 # ─────────────────────────────────────────────
 
-def ejecutar_agente_transaccional(historial: list[dict], user_id: int, conversation_id: str) -> tuple[str, dict]:
+def ejecutar_agente_transaccional(historial: list[dict], user_id: int, conversation_id: str, tool_validator=None) -> tuple[str, dict]:
     messages = [{"role": "system", "content": SYSTEM_PROMPT_TRANSACCIONAL}] + list(historial)
     memoria_herramientas: dict = {}
     cita_confirmada = False
@@ -450,6 +450,17 @@ def ejecutar_agente_transaccional(historial: list[dict], user_id: int, conversat
         for tool_call in tool_calls:
             fn_name = tool_call["function"]["name"]
             arguments = tool_call["function"]["arguments"]
+
+            # CAPA 2: Validar tool call antes de ejecutar
+            if tool_validator:
+                es_valido, error_msg = tool_validator(fn_name, arguments)
+                if not es_valido:
+                    print(f"[Guard] ⚠️  Tool call inválida: {fn_name} - {error_msg}")
+                    result = {"error": f"No puedo realizar esa acción con los datos proporcionados."}
+                    tool_content = json.dumps(result, ensure_ascii=False, default=str)
+                    messages.append({"role": "tool", "content": tool_content})
+                    guardar_mensaje(conversation_id, user_id, "tool", tool_content)
+                    continue
 
             try:
                 result = _ejecutar_herramienta(fn_name, arguments, user_id, historial + messages)

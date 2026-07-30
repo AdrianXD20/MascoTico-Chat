@@ -19,6 +19,14 @@ from agente_transaccional import ejecutar_agente_transaccional
 
 from whisper_stt import transcribir_audio
 
+from guard import (
+    detectar_inyeccion,
+    sanitizar_mensaje,
+    validar_tool_call,
+    detectar_leak_system_prompt,
+    sanitizar_respuesta,
+)
+
 from memory import (
     nueva_conversacion,
     conversacion_existe,
@@ -231,6 +239,14 @@ def chat(request: Request, req: ChatRequest):
     al agente especialista correspondiente (RAG o Transaccional).
     """
     _check_internal_key(request)
+
+    # ── CAPA 1: SANITIZACIÓN DE ENTRADA ──────────
+    es_inocuo, patrones = detectar_inyeccion(req.mensaje)
+    if not es_inocuo:
+        print(f"[Guard] ⚠️  Intento de inyección detectado: {patrones}")
+        # Neutralizar el mensaje
+        req.mensaje = sanitizar_mensaje(req.mensaje)
+
     # ── Resolver ID del usuario ──────────────────
     user_id = req.get_user_id()
 
@@ -290,19 +306,28 @@ CONTEXTO DE SESIÓN ACTUAL (MUY IMPORTANTE):
 
     try:
         if intencion == "rag":
-            respuesta, contexto_rag = ejecutar_agente_rag(req.mensaje, historial)
+            respuesta, contexto_rag = ejecutar_agente_rag(
+                req.mensaje, historial,
+                tool_validator=validar_tool_call
+            )
 
         elif intencion == "transaccional":
             respuesta, memoria_herramientas = ejecutar_agente_transaccional(
-                historial, user_id, conversation_id
+                historial, user_id, conversation_id,
+                tool_validator=validar_tool_call
             )
 
         else:  # fuera_dominio
-            respuesta = "Solo puedo ayudarte con temas relacionados a MascoTico 🐾. ¿Tienes alguna duda sobre nuestros servicios, productos o citas?"
+            respuesta = "Solo puedo ayudarte con temas relacionados a MascoTico. ¿Tienes alguna duda sobre nuestros servicios, productos o citas?"
 
     except Exception as exc:
         print(f"[API] ⚠️  Error crítico del agente ({intencion}): {exc}")
         raise HTTPException(status_code=500, detail=f"Error del agente: {str(exc)}")
+
+    # ── CAPA 3: GUARD DE SALIDA ──────────────────
+    if detectar_leak_system_prompt(respuesta):
+        print("[Guard] ⚠️  Posible fuga de system prompt en respuesta")
+        respuesta = sanitizar_respuesta(respuesta)
 
     # ── Guardar respuesta del asistente ──────────
     guardar_mensaje(conversation_id, user_id, "assistant", respuesta)

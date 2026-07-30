@@ -155,7 +155,7 @@ def _limpiar_texto_rag(texto: str) -> str:
     return re.sub(r'\n{3,}', '\n\n', texto).strip()
 
 
-def ejecutar_agente_rag(mensaje_usuario: str, historial: list[dict]) -> tuple[str, str]:
+def ejecutar_agente_rag(mensaje_usuario: str, historial: list[dict], tool_validator=None) -> tuple[str, str]:
     """
     Ejecuta el agente RAG y devuelve una tupla (respuesta, contexto_recuperado).
     El contexto_recuperado es el texto de los chunks recuperados de ChromaDB,
@@ -201,6 +201,15 @@ Reglas:
     for tool_call in tool_calls:
         fn_name = tool_call["function"]["name"]
         arguments = tool_call["function"]["arguments"]
+
+        # CAPA 2: Validar tool call antes de ejecutar
+        if tool_validator:
+            es_valido, error_msg = tool_validator(fn_name, arguments)
+            if not es_valido:
+                result = {"error": f"Parámetros inválidos: {error_msg}"}
+                messages.append({"role": "tool", "content": json.dumps(result, ensure_ascii=False, default=str)})
+                continue
+
         try:
             result = AVAILABLE_FUNCTIONS_RAG[fn_name](**arguments)
         except Exception as exc:
