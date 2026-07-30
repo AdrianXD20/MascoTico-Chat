@@ -83,6 +83,11 @@ class ventaController{
     async ventasByUserId(req,res){
         try {
             const UserId = req.params.id_usuario;
+
+            if (req.user.rol !== 'admin' && String(req.user.id) !== String(UserId)) {
+                return res.status(403).json({ error: 'No tienes permisos para ver las ventas de este usuario' });
+            }
+
             const ventas = await this.ventaService.ventasByIdUser(UserId)
             if (ventas.length > 0){
                 res.json(ventas)

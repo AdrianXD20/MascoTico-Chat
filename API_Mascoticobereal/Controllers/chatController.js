@@ -1,8 +1,12 @@
 const axios = require('axios');
-const FormData = require('form-data'); // <-- Agregado del segundo código
+const FormData = require('form-data');
 
-// URL del servidor Python FastAPI
 const PYTHON_API = process.env.PYTHON_API_URL || 'http://localhost:8000';
+const RAG_API_KEY = process.env.RAG_API_KEY || '';
+
+function _apiHeaders() {
+  return RAG_API_KEY ? { 'X-API-Key': RAG_API_KEY } : {};
+}
 
 class ChatController {
 
@@ -27,9 +31,9 @@ class ChatController {
                 conversation_id: conversation_id || null
             };
 
-            // Llamar al servidor Python
             const response = await axios.post(`${PYTHON_API}/chat`, payload, {
-                timeout: 300000    // 5 minutos — el LLM local puede tardar (Se mantiene del 1ro)
+                headers: { 'Content-Type': 'application/json', ..._apiHeaders() },
+                timeout: 300000
             });
 
             return res.status(200).json(response.data);
@@ -74,6 +78,7 @@ class ChatController {
             }
 
             const response = await axios.get(`${PYTHON_API}/conversaciones/${user_id}`, {
+                headers: _apiHeaders(),
                 timeout: 10000
             });
 
@@ -103,6 +108,7 @@ class ChatController {
             const response = await axios.delete(
                 `${PYTHON_API}/conversaciones/${conversation_id}`,
                 {
+                    headers: _apiHeaders(),
                     params: { user_id },
                     timeout: 10000
                 }
@@ -147,8 +153,8 @@ class ChatController {
             });
 
             const response = await axios.post(`${PYTHON_API}/transcribir`, formData, {
-                headers: formData.getHeaders(),
-                timeout: 60000   // Whisper tiny no debería tardar más de esto
+                headers: { ...formData.getHeaders(), ..._apiHeaders() },
+                timeout: 60000
             });
 
             return res.status(200).json(response.data);

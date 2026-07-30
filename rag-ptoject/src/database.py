@@ -1,20 +1,21 @@
+import os
 import mysql.connector
 from mysql.connector import Error
 
 def get_connection():
     """
     Crea y retorna una conexión a la base de datos MySQL de MascoTico.
-    Lanza una excepción si no puede conectarse.
+    Usa variables de entorno para las credenciales.
     """
     try:
         connection = mysql.connector.connect(
-            host="bt2tz6y6owhhirywgpen-mysql.services.clever-cloud.com",
-            port=3306,
-            user="unuccu6nnregqdi0",
-            password="dnIp2ppjpC0QHp6AuyvM",
-            database="bt2tz6y6owhhirywgpen",
+            host=os.getenv("DB_HOST", "bt2tz6y6owhhirywgpen-mysql.services.clever-cloud.com"),
+            port=int(os.getenv("DB_PORT", "3306")),
+            user=os.getenv("DB_USER", "unuccu6nnregqdi0"),
+            password=os.getenv("DB_PASSWORD", "dnIp2ppjpC0QHp6AuyvM"),
+            database=os.getenv("DB_NAME", "bt2tz6y6owhhirywgpen"),
             charset="utf8mb4",
-            connection_timeout=10,   # 👈 nuevo: falla en 10s en vez de colgarse
+            connection_timeout=10,
         )
         return connection
     except Error as e:

@@ -66,7 +66,6 @@ const allowed = [
     'https://api-mascoticobereal.onrender.com',
     'https://mascotico-chat-web.onrender.com',
     'https://mascotico-chat.onrender.com',
-    'https://talismanical-wormy-tonisha.ngrok-free.dev',
     /*IP de Alexander*/
     'http://192.168.0.104:8081',/*IP de Frenks*/
     'https://mascotico-luna.vercel.app',/*MascoTico WEB*/
@@ -128,6 +127,20 @@ const limiterRegistro = rateLimit({
   message: { message: "Has alcanzado el límite de registros. Intenta de nuevo mañana." },
 });
 
+// Límite para endpoints de escritura (mascotas, citas, ventas)
+const limiterEscritura = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { message: "Demasiadas solicitudes. Intenta de nuevo en 15 minutos." },
+});
+
+// Límite para listados (productos, veterinarios, usuarios)
+const limiterListados = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { message: "Demasiadas solicitudes. Intenta de nuevo en 15 minutos." },
+});
+
 // Body parsers antes de rate limiters para poder leer req.body.email en el keyGenerator
 app.use(express.json());
 app.use(body.urlencoded({ extended: false }));
@@ -140,6 +153,21 @@ app.use('/register', limiterRegistro);
 app.use('/refresh', limiterRefresh);
 app.use('/veterinario/refresh', limiterRefresh);
 app.get('/csrf-token', limiterCsrf, generateToken);
+
+// Rate limiters para endpoints de escritura y listados
+app.use('/mascotas', (req, res, next) => {
+  if (['POST', 'PUT', 'DELETE'].includes(req.method)) return limiterEscritura(req, res, next);
+  next();
+});
+app.use('/citas', (req, res, next) => {
+  if (['POST', 'PUT'].includes(req.method)) return limiterEscritura(req, res, next);
+  next();
+});
+app.use('/ventas', (req, res, next) => {
+  if (['POST', 'PUT', 'DELETE'].includes(req.method)) return limiterEscritura(req, res, next);
+  if (req.method === 'GET') return limiterListados(req, res, next);
+  next();
+});
 
 app.use("/docs", verifyToken, swaggerUI.serve, swaggerUI.setup(specs));
 app.get("/openapi.json", verifyToken, (req, res) => {
