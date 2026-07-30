@@ -64,7 +64,7 @@ class VeterinarioService{
 
             const jti = crypto.randomUUID();
             const JWT = jwt.sign(
-                {id: veterinario.id, rol: veterinario.rol, jti},
+                {id: veterinario.id, rol: veterinario.rol, tipo: 'veterinario', jti},
                 secretKey,{expiresIn: '15m'}
             );
 

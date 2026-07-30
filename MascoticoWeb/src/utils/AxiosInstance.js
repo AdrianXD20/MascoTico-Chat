@@ -21,8 +21,6 @@ axiosInstance.interceptors.request.use(async (config) => {
 
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
-    config.headers['token'] = token;
-    config.headers['x-access-token'] = token;
   }
 
   if (['post', 'put', 'delete', 'patch'].includes(config.method)) {

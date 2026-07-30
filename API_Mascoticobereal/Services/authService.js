@@ -55,7 +55,7 @@ class UserService {
     
       const jti = crypto.randomUUID();
       const JWT = jwt.sign(
-        { id: user.id, rol: user.rol, jti },
+        { id: user.id, rol: user.rol, tipo: 'usuario', jti },
         secretKey,
         { expiresIn: '15m' }
       );

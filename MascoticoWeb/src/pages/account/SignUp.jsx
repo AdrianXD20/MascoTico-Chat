@@ -140,9 +140,9 @@ function SignUp() {
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full p-2 border border-gray-300 rounded-md placeholder-gray-500"
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres"
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
 
@@ -180,7 +180,7 @@ function SignUp() {
             <div className="flex justify-center py-2">
               <ReCAPTCHA
                 ref={recaptchaRef}
-                sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'}
+                sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
               />
             </div>
 
