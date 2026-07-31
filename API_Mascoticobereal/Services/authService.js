@@ -239,6 +239,10 @@ class UserService {
       camposPermitidos.imagen_perfil = imagen;
     }
 
+    if (Object.keys(camposPermitidos).length === 0) {
+      return this._sanitizeUser(users);
+    }
+
     const update = await User.update(camposPermitidos, { where: { id: Id } });
     if (update > 0) {
       const updated = await User.findByPk(Id);
