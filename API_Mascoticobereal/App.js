@@ -29,7 +29,21 @@ const disponibilidadRoutes = require('./routes/disponibilidadRoutes.js')
 const chatRoutes = require('./routes/chatRoutes.js')
 
 app.set('trust proxy', 1);
+app.set('query parser', 'simple');
 app.disable('x-powered-by');
+
+// Previene prototype pollution removiendo __proto__, constructor, prototype de objetos anidados
+function sanitizarBody(obj) {
+  if (!obj || typeof obj !== 'object') return;
+  const peligrosos = ['__proto__', 'constructor', 'prototype'];
+  for (const key of Object.keys(obj)) {
+    if (peligrosos.includes(key)) {
+      delete obj[key];
+    } else if (typeof obj[key] === 'object') {
+      sanitizarBody(obj[key]);
+    }
+  }
+}
 
 app.use((req, res, next) => {
   res.removeHeader('ngrok-agent-ips');
@@ -155,6 +169,12 @@ const limiterChat = rateLimit({
 app.use(express.json());
 app.use(body.urlencoded({ extended: false }));
 app.use(body.json());
+
+// Sanitizar bodies contra prototype pollution
+app.use((req, res, next) => {
+  sanitizarBody(req.body);
+  next();
+});
 
 app.use(limiterGeneral);
 app.use('/login', limiterLogin);

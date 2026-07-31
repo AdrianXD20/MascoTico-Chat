@@ -105,6 +105,9 @@ async obtenerProductos(req, res) {
   async ObtenerProductosByName(req,res){
     try {
       const nombre = req.query.nombre;
+      if (typeof nombre !== 'string' || !nombre.trim()) {
+        return res.status(400).json({ message: 'El nombre debe ser un texto válido' });
+      }
       const productos = await this.productoService.ObtenerProductosByName(nombre);
       if (productos.length > 0) {
         res.status(201).json(productos)

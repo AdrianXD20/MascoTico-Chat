@@ -105,7 +105,7 @@ class BlogControlller {
 
     async ObtenerBlogsPorNombre(req, res) {
       try {
-        const nombre = req.query.nombre; 
+        const nombre = req.query.nombre; if (typeof nombre !== 'string' || !nombre.trim()) return res.status(400).json({ message: 'El nombre debe ser un texto válido' });
         const blogs = await this.blogsService.ObtenerBlogsPorNombre(nombre); 
     
         if (blogs.length > 0) {

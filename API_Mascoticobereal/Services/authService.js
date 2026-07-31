@@ -29,6 +29,7 @@ class UserService {
   }
 
   async crearUsuario(nuevoUsuario) {
+    const sequelize = require('../database/conexion');
     try {
       const campos = ['nombre', 'email', 'contraseña', 'rol', 'direccion', 'telefono', 'imagen_perfil'];
       const seguro = {};
@@ -37,7 +38,11 @@ class UserService {
       }
       seguro.contraseña = await bcrypt.hash(seguro.contraseña, 10);
 
-      const usuarioCreado = await User.create(seguro);
+      const usuarioCreado = await sequelize.transaction(async (t) => {
+        const existe = await User.findOne({ where: { email: seguro.email }, lock: t.LOCK.UPDATE, transaction: t });
+        if (existe) throw new Error('El email ya está registrado');
+        return User.create(seguro, { transaction: t });
+      });
 
       // 👇 Objeto limpio, SIN el hash de la contraseña
       const usuarioSeguro = {
