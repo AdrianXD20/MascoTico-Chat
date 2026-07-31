@@ -8,6 +8,14 @@ const RAG_API_KEY = process.env.RAG_API_KEY || '';
 let activeRequests = 0;
 const MAX_CONCURRENT = 2;
 
+// Limpia contenido activo (HTML/scripts) del mensaje antes de enviarlo al agente
+function sanitizarMensaje(texto) {
+  return String(texto)
+    .replace(/<\s*\/?\s*(script|iframe|object|embed|link|meta|style|form|svg|img|video|audio|source|base)\b[^>]*>/gi, '')
+    .replace(/<[^>]*>/g, '')
+    .trim();
+}
+
 function _apiHeaders() {
   return RAG_API_KEY ? { 'X-API-Key': RAG_API_KEY } : {};
 }
@@ -39,9 +47,14 @@ class ChatController {
                 return res.status(400).json({ error: 'El mensaje es demasiado largo (máximo 1000 caracteres)' });
             }
 
+            const mensajeLimpio = sanitizarMensaje(mensaje);
+            if (mensajeLimpio === '') {
+                return res.status(400).json({ error: 'El mensaje no puede estar vacío' });
+            }
+
             const payload = {
                 user_id,
-                mensaje: mensaje.trim(),
+                mensaje: mensajeLimpio,
                 conversation_id: conversation_id || null
             };
 
