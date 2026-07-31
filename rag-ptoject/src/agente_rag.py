@@ -21,7 +21,7 @@ from tools import (
     consultar_servicios_veterinario,
 )
 
-MODEL = "qwen2.5:7b"
+MODEL = "qwen2.5:3b"
 BASE_DIR = Path(__file__).resolve().parent
 CHROMA_PATH = BASE_DIR / "chroma_db"
 
