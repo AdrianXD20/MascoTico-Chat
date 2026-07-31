@@ -4,6 +4,7 @@ class mascotasServices {
   
   _sanitizar(valor) {
     if (typeof valor !== 'string') return valor;
+    if (valor.length > 1000) valor = valor.slice(0, 1000);
     return valor
       .replace(/<[^>]*>/g, '')
       .replace(/[<>]/g, '')

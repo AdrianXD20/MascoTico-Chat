@@ -30,10 +30,14 @@ class UserService {
 
   async crearUsuario(nuevoUsuario) {
     try {
-      const hashedPassword = await bcrypt.hash(nuevoUsuario.contraseña, 10);
-      nuevoUsuario.contraseña = hashedPassword;
+      const campos = ['nombre', 'email', 'contraseña', 'rol', 'direccion', 'telefono', 'imagen_perfil'];
+      const seguro = {};
+      for (const key of Object.keys(nuevoUsuario || {})) {
+        if (campos.includes(key)) seguro[key] = nuevoUsuario[key];
+      }
+      seguro.contraseña = await bcrypt.hash(seguro.contraseña, 10);
 
-      const usuarioCreado = await User.create(nuevoUsuario);
+      const usuarioCreado = await User.create(seguro);
 
       // 👇 Objeto limpio, SIN el hash de la contraseña
       const usuarioSeguro = {
@@ -61,20 +65,10 @@ class UserService {
       }
 
       const user = await User.findOne({ where: { email } });
+      const dummyHash = '$2a$10$' + 'x'.repeat(53);
+      const isPasswordValid = await bcrypt.compare(contraseña, user ? user.contraseña : dummyHash);
 
-      if (!user) {
-        const attempts = (record?.count || 0) + 1;
-        if (attempts >= MAX_LOGIN_ATTEMPTS) {
-          loginAttempts.set(key, { count: attempts, lockUntil: now + LOCKOUT_MINUTES * 60 * 1000 });
-        } else {
-          loginAttempts.set(key, { count: attempts });
-        }
-        throw new Error('Credenciales inválidas');
-      }
-
-      
-      const isPasswordValid = await bcrypt.compare(contraseña, user.contraseña);
-      if (!isPasswordValid) {
+      if (!user || !isPasswordValid) {
         const attempts = (record?.count || 0) + 1;
         if (attempts >= MAX_LOGIN_ATTEMPTS) {
           loginAttempts.set(key, { count: attempts, lockUntil: now + LOCKOUT_MINUTES * 60 * 1000 });

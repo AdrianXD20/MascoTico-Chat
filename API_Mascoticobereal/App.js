@@ -28,6 +28,7 @@ const blogsRoutes= require('./routes/blogsRoutes.js')
 const disponibilidadRoutes = require('./routes/disponibilidadRoutes.js')
 const chatRoutes = require('./routes/chatRoutes.js')
 
+app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
 app.use((req, res, next) => {
