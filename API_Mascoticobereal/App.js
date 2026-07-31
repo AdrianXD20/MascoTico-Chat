@@ -182,7 +182,7 @@ app.use('/veterinario/login', limiterLogin);
 app.use('/register', limiterRegistro);
 app.use('/refresh', limiterRefresh);
 app.use('/veterinario/refresh', limiterRefresh);
-app.get('/csrf-token', limiterCsrf, verifyToken, generateToken);
+app.get('/csrf-token', limiterCsrf, generateToken);
 
 // Rate limiters para endpoints de escritura y listados
 app.use('/mascotas', (req, res, next) => {
