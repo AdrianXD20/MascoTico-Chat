@@ -15,7 +15,7 @@ class mascotasServices {
   }
 
   _sanitizarObjeto(obj) {
-    const campos = ['nombre', 'raza', 'especie', 'color'];
+    const campos = ['nombre', 'raza', 'especie', 'color', 'tipo', 'edad', 'peso', 'condiciones_medicas'];
     const sanitizado = {};
     for (const key of Object.keys(obj)) {
       if (campos.includes(key)) {
