@@ -10,17 +10,29 @@ class anunciosService{
         return anuncios.findByPk(Id)
     }
 
+    _filtrarCampos(datos) {
+      const campos = ['imagen', 'descripcion'];
+      const filtrado = {};
+      for (const key of Object.keys(datos || {})) {
+        if (campos.includes(key)) {
+          filtrado[key] = datos[key];
+        }
+      }
+      return filtrado;
+    }
+
     async crearAnuncios(newAdd){
-        return anuncios.create(newAdd);
+        return anuncios.create(this._filtrarCampos(newAdd));
     }
 
     async actualizarAnuncios(id, updateAdd, imagen = null){
         const add = await anuncios.findByPk(id);
         if (add) {
+            const seguro = this._filtrarCampos(updateAdd);
             if (imagen) {
-                updateAdd.imagen = imagen;
+                seguro.imagen = imagen;
             }
-            const updates = await anuncios.update(updateAdd, {
+            const updates = await anuncios.update(seguro, {
                 where: { id: id }
             });
             if (updates > 0) {

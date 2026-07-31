@@ -40,7 +40,7 @@ class ventaController{
 
     async crearVenta(req,res){
         try{
-            const nuevaVenta= req.body;
+            const nuevaVenta = { ...req.body, id_usuario: req.user.id };
             const venta= await this.ventaService.crearVenta(nuevaVenta);
             auditLog.log('venta_creada', { user_id: req.user?.id, ip: req.ip });
             res.status(200).json(venta)

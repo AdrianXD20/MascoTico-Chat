@@ -3,7 +3,8 @@ const auditLog = require('../Services/auditLog');
 
 exports.agendarCita = async (req, res) => {
     try {
-        const cita = await citaService.agendarCita(req.body);
+        const datos = { ...req.body, id_usuario: req.user.id };
+        const cita = await citaService.agendarCita(datos);
         auditLog.log('cita_creada', { user_id: req.user?.id, cita_id: cita?.id, veterinario_id: req.body.id_veterinario, ip: req.ip });
         res.status(201).json({ message: 'Cita registrada', cita });
     } catch (error) {
@@ -15,8 +16,15 @@ exports.actualizarEstadoCita = async (req, res) => {
     try {
         const { id } = req.params;
         const { estado } = req.body;
-        const cita = await citaService.actualizarEstadoCita(id, estado);
-        res.json({ message: `Cita ${estado}`, cita });
+        const cita = await citaService.obtenerCitaPorId(id);
+        if (!cita) {
+            return res.status(404).json({ error: 'Cita no encontrada' });
+        }
+        if (req.user.rol !== 'admin' && String(cita.id_usuario) !== String(req.user.id) && String(cita.id_veterinario) !== String(req.user.id)) {
+            return res.status(403).json({ error: 'No tienes permisos para modificar esta cita' });
+        }
+        const actualizada = await citaService.actualizarEstadoCita(id, estado);
+        res.json({ message: `Cita ${estado}`, cita: actualizada });
     } catch (error) {
         res.status(400).json({ error: 'Error al actualizar el estado de la cita' });
     }

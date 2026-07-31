@@ -561,24 +561,29 @@ def realizar_compra(id_usuario: int, items: list[dict]) -> dict:
         return {"error": "La lista de productos está vacía."}
     conn = get_connection()
     try:
+        conn.start_transaction()
         cursor = conn.cursor(dictionary=True)
         # Verificar usuario
         cursor.execute("SELECT nombre FROM usuarios WHERE id = %s", (id_usuario,))
         usuario = cursor.fetchone()
         if not usuario:
+            conn.rollback()
             return {"error": f"El usuario con ID {id_usuario} no existe."}
         total = Decimal("0")
-        # Validar stock y precios
+        # Validar stock y precios (con FOR UPDATE para evitar race condition)
         for item in items:
             pid = item.get("id_producto")
             qty = item.get("cantidad")
             if pid is None or qty is None:
+                conn.rollback()
                 return {"error": "Cada ítem debe contener 'id_producto' y 'cantidad'."}
-            cursor.execute("SELECT nombre, precio, stock FROM productos WHERE id = %s", (pid,))
+            cursor.execute("SELECT nombre, precio, stock FROM productos WHERE id = %s FOR UPDATE", (pid,))
             prod = cursor.fetchone()
             if not prod:
+                conn.rollback()
                 return {"error": f"Producto con ID {pid} no encontrado."}
             if prod["stock"] < qty:
+                conn.rollback()
                 return {"error": f"Stock insuficiente para '{prod['nombre']}'. Disponibles: {prod['stock']}, solicitados: {qty}."}
             total += prod["precio"] * Decimal(str(qty))
             # Guardar datos para respuesta

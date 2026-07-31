@@ -15,17 +15,29 @@ class BlogsService{
         return Blogs.findByPk(Id);
       }
     
+      _filtrarCampos(datos) {
+        const campos = ['titulo', 'imagen', 'categoria', 'id_veterinario', 'contenido'];
+        const filtrado = {};
+        for (const key of Object.keys(datos || {})) {
+          if (campos.includes(key)) {
+            filtrado[key] = datos[key];
+          }
+        }
+        return filtrado;
+      }
+
       async crearBlog(nuevoBlog) {
-        return Blogs.create(nuevoBlog);
+        return Blogs.create(this._filtrarCampos(nuevoBlog));
       }
     
       async actualizarBlog(Id, datosActualizados,imagen=null) {
         const blogs = await Blogs.findByPk(Id);
         if (blogs) {
+          const seguro = this._filtrarCampos(datosActualizados);
           if(imagen){
-            datosActualizados.imagen = imagen
+            seguro.imagen = imagen
           }
-          const updateRows = await Blogs.update(datosActualizados,{
+          const updateRows = await Blogs.update(seguro,{
             where:{id:Id}
           })  
               if (updateRows > 0){

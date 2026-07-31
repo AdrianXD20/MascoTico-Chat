@@ -12,14 +12,25 @@ class PetsService{
         return Pets.findByPk(Id)
     }
 
+    _filtrarCampos(datos) {
+        const campos = ['mascota', 'nombre', 'raza', 'usuario'];
+        const filtrado = {};
+        for (const key of Object.keys(datos || {})) {
+            if (campos.includes(key)) {
+                filtrado[key] = datos[key];
+            }
+        }
+        return filtrado;
+    }
+
     async crearPets(nuevoPet){
-        return Pets.create(nuevoPet)
+        return Pets.create(this._filtrarCampos(nuevoPet))
     }
 
     async actualizarPet(Id, newData){
         const pet = await Pets.findByPk(Id);
         if (pet) {
-            const updateRows = await Pets.update(newData, { where: { id: Id } });
+            const updateRows = await Pets.update(this._filtrarCampos(newData), { where: { id: Id } });
             if (updateRows > 0) {
                 return Pets.findByPk(Id);
             }

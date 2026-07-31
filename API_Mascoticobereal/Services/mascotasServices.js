@@ -19,8 +19,6 @@ class mascotasServices {
     for (const key of Object.keys(obj)) {
       if (campos.includes(key)) {
         sanitizado[key] = this._sanitizar(obj[key]);
-      } else {
-        sanitizado[key] = obj[key];
       }
     }
     return sanitizado;

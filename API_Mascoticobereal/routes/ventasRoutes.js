@@ -18,7 +18,7 @@ router.get('/ventas/usuario/:id_usuario', verifyToken, (req, res) => ventaContro
 router.get('/ventas', verifyToken, isAdmin, (req, res) => ventaController.obtenerVentas(req, res));
 router.get('/ventas/:id', verifyToken, isAdmin, (req, res) => ventaController.obtenerVentaPorId(req, res));
 router.post('/ventas', verifyToken, ventaCrear, (req, res) => ventaController.crearVenta(req, res));
-router.put('/ventas/:id', verifyToken, (req, res) => ventaController.actualizarVenta(req, res));
-router.delete('/ventas/:id', verifyToken, (req, res) => ventaController.eliminarVenta(req, res));
+router.put('/ventas/:id', verifyToken, isAdmin, (req, res) => ventaController.actualizarVenta(req, res));
+router.delete('/ventas/:id', verifyToken, isAdmin, (req, res) => ventaController.eliminarVenta(req, res));
 
 module.exports = router;

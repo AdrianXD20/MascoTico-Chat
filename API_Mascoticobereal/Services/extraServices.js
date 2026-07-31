@@ -13,14 +13,25 @@ class extraService{
         return Extra.findByPk(Id);
     }
 
+    _filtrarCampos(datos) {
+      const campos = ['nombre'];
+      const filtrado = {};
+      for (const key of Object.keys(datos || {})) {
+        if (campos.includes(key)) {
+          filtrado[key] = datos[key];
+        }
+      }
+      return filtrado;
+    }
+
     async crearExtra(nuevoExtra){
-        return Extra.create(nuevoExtra);
+        return Extra.create(this._filtrarCampos(nuevoExtra));
     }
 
     async actualizarExtra(Id, datosActualizados){
         const extra= await Extra.findByPk(Id);
         if(extra){
-            const updatedRows = await Extra.update(datosActualizados,{
+            const updatedRows = await Extra.update(this._filtrarCampos(datosActualizados),{
                 where:{id:Id},
             })
             if(updatedRows > 0){

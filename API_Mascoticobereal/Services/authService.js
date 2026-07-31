@@ -8,6 +8,19 @@ require('dotenv').config();
 
 const secretKey = process.env.secretKey;
 
+const loginAttempts = new Map();
+const MAX_LOGIN_ATTEMPTS = 10;
+const LOCKOUT_MINUTES = 15;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, data] of loginAttempts) {
+    if (data.lockUntil && data.lockUntil <= now) {
+      loginAttempts.delete(key);
+    }
+  }
+}, 60 * 1000);
+
 class UserService {
   constructor() {}
 
@@ -39,20 +52,40 @@ class UserService {
 
   async login(email, contraseña) {
     try {
-      
+      const key = `login:${email}`;
+      const now = Date.now();
+      const record = loginAttempts.get(key);
+
+      if (record && record.lockUntil && record.lockUntil > now) {
+        throw new Error('Demasiados intentos. Intenta de nuevo en 15 minutos.');
+      }
+
       const user = await User.findOne({ where: { email } });
 
       if (!user) {
-        throw new Error('Usuario no encontrado');
+        const attempts = (record?.count || 0) + 1;
+        if (attempts >= MAX_LOGIN_ATTEMPTS) {
+          loginAttempts.set(key, { count: attempts, lockUntil: now + LOCKOUT_MINUTES * 60 * 1000 });
+        } else {
+          loginAttempts.set(key, { count: attempts });
+        }
+        throw new Error('Credenciales inválidas');
       }
 
       
       const isPasswordValid = await bcrypt.compare(contraseña, user.contraseña);
       if (!isPasswordValid) {
-        throw new Error('Contraseña incorrecta');
+        const attempts = (record?.count || 0) + 1;
+        if (attempts >= MAX_LOGIN_ATTEMPTS) {
+          loginAttempts.set(key, { count: attempts, lockUntil: now + LOCKOUT_MINUTES * 60 * 1000 });
+        } else {
+          loginAttempts.set(key, { count: attempts });
+        }
+        throw new Error('Credenciales inválidas');
       }
 
-    
+      loginAttempts.delete(key);
+
       const jti = crypto.randomUUID();
       const JWT = jwt.sign(
         { id: user.id, rol: user.rol, tipo: 'usuario', jti },

@@ -35,12 +35,23 @@ class VeterinarioService{
         };
     }
 
+    _filtrarCamposVet(datos) {
+        const campos = ['grado_estudio', 'especialidad', 'nombre', 'apellido', 'dni', 'email', 'contraseña', 'rol', 'imagen_perfil', 'cedula', 'celular', 'direccion', 'calificacion', 'hora_apertura', 'hora_cierre'];
+        const filtrado = {};
+        for (const key of Object.keys(datos || {})) {
+            if (campos.includes(key)) {
+                filtrado[key] = datos[key];
+            }
+        }
+        return filtrado;
+    }
+
     async crearVeterinario(nuevoVeterinario){
         try{
-            const hashedPassword = await bcrypt.hash(nuevoVeterinario.contraseña,10);
-            nuevoVeterinario.contraseña = hashedPassword;
+            const seguro = this._filtrarCamposVet(nuevoVeterinario);
+            seguro.contraseña = await bcrypt.hash(seguro.contraseña, 10);
 
-            const veterinarioCreado = await Veterinario.create(nuevoVeterinario)
+            const veterinarioCreado = await Veterinario.create(seguro)
             return this._sanitizeVet(veterinarioCreado);
         }catch(error){
             throw new Error ('Error al registrarse: '+ error.message)

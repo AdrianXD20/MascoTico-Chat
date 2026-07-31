@@ -25,12 +25,14 @@ async obtenerMascotas(req, res) {
     async obtenerMascotasPorId(req, res) {
       try {
         const id = req.params.id;
-        const producto = await this.mascotaService.obtenerMascotasPorId(id);
-        if (producto) {
-          res.json(producto);
-        } else {
-          res.status(404).json({ message: 'Mascota no encontrado' });
+        const mascota = await this.mascotaService.obtenerMascotasPorId(id);
+        if (!mascota) {
+          return res.status(404).json({ message: 'Mascota no encontrado' });
         }
+        if (req.user.rol !== 'admin' && String(mascota.id_usuario) !== String(req.user.id)) {
+          return res.status(403).json({ message: 'No tienes permisos para ver esta mascota' });
+        }
+        res.json(mascota);
       } catch (error) {
         console.error('Error en obtenerMascotaPorId:', error); 
         res.status(500).json({ message: 'Error al obtener la Mascota' });

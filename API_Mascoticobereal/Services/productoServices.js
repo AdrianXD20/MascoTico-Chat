@@ -17,17 +17,29 @@ class ProductoService {
       return Productos.findByPk(Id);
     }
   
+    _filtrarCampos(datos) {
+      const campos = ['nombre', 'marca', 'mascota', 'precio', 'stock', 'edad', 'tamaño_mascota', 'imagen_producto', 'categoria', 'peso', 'id_veterinario'];
+      const filtrado = {};
+      for (const key of Object.keys(datos || {})) {
+        if (campos.includes(key)) {
+          filtrado[key] = datos[key];
+        }
+      }
+      return filtrado;
+    }
+
     async crearProducto(nuevoProducto) {
-      return Productos.create(nuevoProducto);
+      return Productos.create(this._filtrarCampos(nuevoProducto));
     }
   
     async actualizarProducto(Id, datosActualizados,imagen=null) {
       const productos = await Productos.findByPk(Id);
       if (productos) {
+        const seguro = this._filtrarCampos(datosActualizados);
         if(imagen){
-          datosActualizados.imagen = imagen
+          seguro.imagen = imagen
         }
-        const updateRows = await Productos.update(datosActualizados,{
+        const updateRows = await Productos.update(seguro,{
           where:{id:Id}
         })  
             if (updateRows > 0){

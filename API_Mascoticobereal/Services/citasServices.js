@@ -24,6 +24,17 @@ const verificarDisponibilidad = async (id_veterinario, fecha_cita, hora_cita) =>
     return hora_cita >= disponibilidad.hora_inicio && hora_cita <= disponibilidad.hora_fin;
 };
 
+const _filtrarCamposCita = (datos) => {
+    const campos = ['id_usuario', 'id_veterinario', 'fecha_cita', 'hora', 'razon', 'mascota'];
+    const filtrado = {};
+    for (const key of Object.keys(datos || {})) {
+        if (campos.includes(key)) {
+            filtrado[key] = datos[key];
+        }
+    }
+    return filtrado;
+};
+
 // Agendar una nueva cita
 const agendarCita = async (data) => {
     const { id_veterinario, fecha_cita, hora_cita } = data;
@@ -32,7 +43,7 @@ const agendarCita = async (data) => {
     const disponible = await verificarDisponibilidad(id_veterinario, fecha_cita, hora_cita);
     if (!disponible) throw new Error('Horario no disponible');
 
-    const cita = await Cita.create(data);
+    const cita = await Cita.create(_filtrarCamposCita(data));
 
     // Enviar correo de confirmación al veterinario
     const vet = await Veterinario.findByPk(id_veterinario, { attributes: ['email'] });
@@ -70,6 +81,11 @@ const actualizarEstadoCita = async (id, estado) => {
     return cita;
 };
 
+// Obtener una cita por ID
+const obtenerCitaPorId = async (id) => {
+    return Cita.findByPk(id);
+};
+
 // Obtener citas de un veterinario
 const obtenerCitasPorVeterinario = async (id_veterinario) => {
     return await Cita.findAll({ where: { id_veterinario } });
@@ -81,4 +97,4 @@ const ObtenerCitasByUserId = async(userId) => {
         where: { id_usuario: userId } // Usa 'id_usuario', que es el que mapeamos arriba
     });
 }
-module.exports = { agendarCita, actualizarEstadoCita, obtenerCitasPorVeterinario, ObtenerCitasByUserId };
+module.exports = { agendarCita, actualizarEstadoCita, obtenerCitaPorId, obtenerCitasPorVeterinario, ObtenerCitasByUserId };
