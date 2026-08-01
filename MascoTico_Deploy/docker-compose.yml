@@ -1,6 +1,9 @@
 services:
   frontend:
-    build: ../MascoticoWeb
+    build:
+      context: ../MascoticoWeb
+      args:
+        VITE_API_BASE_URL: http://localhost:3000
     ports:
       - "5173:80"
     depends_on:
