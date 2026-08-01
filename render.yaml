@@ -45,5 +45,7 @@ services:
     rootDir: MascoticoWeb
     healthCheckPath: /
     envVars:
+      - key: PORT
+        value: "80"
       - key: VITE_API_BASE_URL
         value: https://mascotico-api.onrender.com
