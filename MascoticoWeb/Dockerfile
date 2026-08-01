@@ -1,7 +1,7 @@
 # Build stage
 FROM node:20-alpine AS build
 WORKDIR /app
-ARG VITE_API_BASE_URL=https://mascotico-api.onrender.com
+ARG VITE_API_BASE_URL=https://mascotico-chat.onrender.com
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 COPY package*.json ./
 RUN npm install
