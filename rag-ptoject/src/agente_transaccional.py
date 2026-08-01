@@ -22,7 +22,7 @@ from tools import (
     consultar_stock_producto,         # necesario para resolver id_producto
 )
 
-MODEL = "qwen2.5:3b"
+MODEL = "qwen3:4b"
 MAX_TOOL_ROUNDS = 6
 MEMORIA_HERRAMIENTAS_PREFIX = "[Memoria interna para agendamiento — no mostrar al usuario]"
 
@@ -441,7 +441,7 @@ def ejecutar_agente_transaccional(historial: list[dict], user_id: int, conversat
     print(f"\n[AgenteTransaccional] Enviando historial al LLM (user_id={user_id})...\n")
 
     for ronda in range(MAX_TOOL_ROUNDS):
-        response = ollama.chat(model=MODEL, messages=messages, tools=TOOLS)
+        response = ollama.chat(model=MODEL, messages=messages, tools=TOOLS, think=False)
         message = response["message"]
 
         tool_calls = message.get("tool_calls")
@@ -507,7 +507,7 @@ def ejecutar_agente_transaccional(historial: list[dict], user_id: int, conversat
             messages.append({"role": "tool", "content": tool_content})
             guardar_mensaje(conversation_id, user_id, "tool", tool_content)
 
-    final = ollama.chat(model=MODEL, messages=messages, tools=TOOLS)
+    final = ollama.chat(model=MODEL, messages=messages, tools=TOOLS, think=False)
     texto = _limpiar_respuesta_llm(final["message"].get("content") or "")
     texto = _sanear_render_cita(texto, cita_confirmada)
     return texto, memoria_herramientas

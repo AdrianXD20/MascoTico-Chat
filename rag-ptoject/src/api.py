@@ -43,7 +43,7 @@ from datetime import datetime
 # CONFIGURACIÓN
 # ─────────────────────────────────────────────
 
-MODEL = "qwen2.5:3b"
+MODEL = "qwen3:4b"
 MEMORIA_HERRAMIENTAS_PREFIX = "[Memoria interna para agendamiento — no mostrar al usuario]"
 
 app = FastAPI(title="MascoTico AI Agent", version="1.0.0")
@@ -287,10 +287,10 @@ def chat(request: Request, req: ChatRequest):
 
         fecha_hoy = datetime.now().strftime("%Y-%m-%d")
 
-        # System prompt dinámico con el ID real del usuario inyectado
-        # (lo sigue usando el agente Transaccional para agendar/comprar)
-        system_prompt = SYSTEM_PROMPT_BASE + f"""
-CONTEXTO DE SESIÓN ACTUAL (MUY IMPORTANTE):
+        # Contexto de sesión dinámico con el ID real del usuario.
+        # Las reglas completas viven en el prompt de cada agente especialista
+        # (agente_transaccional.py / agente_rag.py); aquí solo va lo que varía por sesión.
+        system_prompt = f"""CONTEXTO DE SESIÓN ACTUAL (MUY IMPORTANTE):
 - LA FECHA DE HOY ES {fecha_hoy}. Usa esto para calcular "mañana".
 - El usuario autenticado que está chateando ahora tiene ID = {user_id}
 - Cuando necesites llamar a "agendar_cita", SIEMPRE usa id_usuario = {user_id}

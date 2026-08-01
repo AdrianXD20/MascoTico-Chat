@@ -21,7 +21,7 @@ from tools import (
     consultar_servicios_veterinario,
 )
 
-MODEL = "qwen2.5:3b"
+MODEL = "qwen3:4b"
 BASE_DIR = Path(__file__).resolve().parent
 CHROMA_PATH = BASE_DIR / "chroma_db"
 
@@ -186,7 +186,7 @@ Reglas:
         {"role": "user", "content": mensaje_usuario}
     ]
 
-    response = ollama.chat(model=MODEL, messages=messages, tools=TOOLS_RAG)
+    response = ollama.chat(model=MODEL, messages=messages, tools=TOOLS_RAG, think=False)
     message = response["message"]
 
     tool_calls = message.get("tool_calls")
@@ -221,5 +221,5 @@ Reglas:
             result = {"error": str(exc)}
         messages.append({"role": "tool", "content": json.dumps(result, ensure_ascii=False, default=str)})
 
-    final = ollama.chat(model=MODEL, messages=messages, tools=TOOLS_RAG)
+    final = ollama.chat(model=MODEL, messages=messages, tools=TOOLS_RAG, think=False)
     return _limpiar_texto_rag(final["message"].get("content", "")), contexto_texto

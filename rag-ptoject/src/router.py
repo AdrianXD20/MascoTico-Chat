@@ -6,7 +6,7 @@ a qué especialista delegar la conversación.
 
 import ollama
 
-MODEL = "qwen2.5:3b"
+MODEL = "qwen3:4b"
 
 SYSTEM_PROMPT_ROUTER = """Eres un clasificador de intenciones para MascoTico, una plataforma de cuidado de mascotas.
 
@@ -49,7 +49,7 @@ def clasificar_intencion(mensaje_usuario: str, historial: list[dict]) -> str:
         response = ollama.chat(model=MODEL, messages=[
             {"role": "system", "content": SYSTEM_PROMPT_ROUTER},
             {"role": "user", "content": prompt_usuario}
-        ])
+        ], think=False)
         intencion = response["message"]["content"].strip().lower()
 
         # Limpieza por si el LLM agrega texto extra
