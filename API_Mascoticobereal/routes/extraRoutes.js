@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const {verifyToken} = require('../middleware/authMiddleware')
+const {verifyToken, isAdmin} = require('../middleware/authMiddleware')
 
 const ExtraRepository = require('../Repositories/extraRepository')
 const ExtraService = require('../Services/extraServices')
@@ -121,7 +121,7 @@ router.get('/caracteristicas/:id', verifyToken, (req, res) => extraController.ob
  *       400:
  *         description: Datos de entrada no válidos
  */
-router.post('/caracteristicas', verifyToken, (req, res) => extraController.crearExtra(req, res));
+router.post('/caracteristicas', verifyToken, isAdmin, (req, res) => extraController.crearExtra(req, res));
 
 /**
  * @swagger
@@ -153,7 +153,7 @@ router.post('/caracteristicas', verifyToken, (req, res) => extraController.crear
  *         description: Datos de entrada no válidos
  */
 
-router.put('/caracteristicas/:id', verifyToken, (req, res) => extraController.actualizarExtra(req, res));
+router.put('/caracteristicas/:id', verifyToken, isAdmin, (req, res) => extraController.actualizarExtra(req, res));
 
 /**
  * @swagger
@@ -176,6 +176,6 @@ router.put('/caracteristicas/:id', verifyToken, (req, res) => extraController.ac
  *       404:
  *         description: Característica extra no encontrada
  */
-router.delete('/caracteristicas/:id', verifyToken, (req, res) => extraController.eliminarExtra(req, res));
+router.delete('/caracteristicas/:id', verifyToken, isAdmin, (req, res) => extraController.eliminarExtra(req, res));
 
 module.exports = router;

@@ -8,8 +8,12 @@ async function obtenerDisponibilidadPorVeterinario(id_veterinario) {
     return await DisponibilidadVeterinario.findAll({ where: { id_veterinario } });
 }
 
+async function obtenerDisponibilidadPorId(id) {
+    return await DisponibilidadVeterinario.findByPk(id);
+}
+
 async function eliminarDisponibilidad(id) {
     return await DisponibilidadVeterinario.destroy({ where: { id } });
 }
 
-module.exports = { definirDisponibilidad, obtenerDisponibilidadPorVeterinario, eliminarDisponibilidad };
+module.exports = { definirDisponibilidad, obtenerDisponibilidadPorVeterinario, obtenerDisponibilidadPorId, eliminarDisponibilidad };

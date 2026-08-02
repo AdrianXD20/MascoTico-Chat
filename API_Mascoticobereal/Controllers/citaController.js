@@ -32,7 +32,13 @@ exports.actualizarEstadoCita = async (req, res) => {
 
 exports.obtenerCitasPorVeterinario = async (req, res) => {
     try {
-        const citas = await citaService.obtenerCitasPorVeterinario(req.params.id_veterinario);
+        const idVeterinario = req.params.id_veterinario;
+
+        if (req.user.rol !== 'admin' && String(req.user.id) !== String(idVeterinario)) {
+            return res.status(403).json({ error: 'No tienes permisos para ver las citas de este veterinario' });
+        }
+
+        const citas = await citaService.obtenerCitasPorVeterinario(idVeterinario);
         res.json(citas);
     } catch (error) {
         res.status(400).json({ error: 'Error al obtener las citas del veterinario' });
