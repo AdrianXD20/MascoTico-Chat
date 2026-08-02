@@ -38,9 +38,8 @@ async obtenerMascotas(req, res) {
   
     async crearMascotas(req, res) {
       try {
-        const { nombre, tipo, raza, edad, peso, condiciones_medicas } = req.body;
-        const nuevoProducto = { nombre, tipo, raza, edad, peso, condiciones_medicas };
-        const producto = await this.mascotaService.crearMascotas(nuevoProducto);
+        const { nombre } = req.body;
+        const producto = await this.mascotaService.crearMascotas({ nombre });
         res.status(201).json(producto);
       } catch (error) {
         console.error('Error en crearMascota:', error); 
@@ -51,9 +50,8 @@ async obtenerMascotas(req, res) {
     async actualizarMascotas(req, res) {
       try {
         const id = req.params.id;
-        const { nombre, tipo, raza, edad, peso, condiciones_medicas } = req.body;
-        const datosActualizados = { nombre, tipo, raza, edad, peso, condiciones_medicas };
-        const producto = await this.mascotaService.actualizarMascotas(id, datosActualizados);
+        const { nombre } = req.body;
+        const producto = await this.mascotaService.actualizarMascotas(id, { nombre });
         if (producto) {
           res.json(producto);
         } else {

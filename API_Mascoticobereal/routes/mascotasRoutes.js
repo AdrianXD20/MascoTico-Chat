@@ -3,7 +3,9 @@ const router = express.Router();
 const MascotaController = require('../Controllers/mascotasController');
 const MascotaService = require('../Services/mascotasServices');
 const MascotaRepository = require('../Repositories/mascotasRepository');
-const { verifyToken } = require('../middleware/authMiddleware');
+const { verifyToken, isAdmin } = require('../middleware/authMiddleware');
+const { verifyRol } = require('../middleware/verifyRol');
+const { csrfProtection } = require('../middleware/csrfMiddleware');
 const { mascotaCrear, mascotaActualizar } = require('../middleware/validators');
 
 const mascotasRepository = new MascotaRepository();
@@ -22,18 +24,10 @@ const mascotasController = new MascotaController(mascotaService);
  *           example: 1
  *         nombre:
  *           type: string
- *           example: "Luna"
- *         raza:
- *           type: string
- *           example: "ShihTzu"
- *         id_usuario:
- *           type: integer
- *           example: 1075
+ *           example: "Perro"
  *       required:
  *         - id
  *         - nombre
- *         - raza
- *         - id_usuario
  */
 
 /**
@@ -122,7 +116,7 @@ router.get('/mascotas/:id', verifyToken, (req, res) => mascotasController.obtene
  *       400:
  *         description: Error en la solicitud
  */
-router.post('/mascotas', verifyToken, mascotaCrear, (req, res) => mascotasController.crearMascotas(req, res));
+router.post('/mascotas', verifyToken, verifyRol, isAdmin, csrfProtection, mascotaCrear, (req, res) => mascotasController.crearMascotas(req, res));
 
 /**
  * @swagger
@@ -153,7 +147,7 @@ router.post('/mascotas', verifyToken, mascotaCrear, (req, res) => mascotasContro
  *       404:
  *         description: Mascota no encontrada
  */
-router.put('/mascotas/:id', verifyToken, mascotaActualizar, (req, res) => mascotasController.actualizarMascotas(req, res));
+router.put('/mascotas/:id', verifyToken, verifyRol, isAdmin, csrfProtection, mascotaActualizar, (req, res) => mascotasController.actualizarMascotas(req, res));
 
 /**
  * @swagger
@@ -176,6 +170,6 @@ router.put('/mascotas/:id', verifyToken, mascotaActualizar, (req, res) => mascot
  *       404:
  *         description: Mascota no encontrada
  */
-router.delete('/mascotas/:id', verifyToken, (req, res) => mascotasController.eliminarMascotas(req, res));
+router.delete('/mascotas/:id', verifyToken, verifyRol, isAdmin, csrfProtection, (req, res) => mascotasController.eliminarMascotas(req, res));
 
 module.exports = router;

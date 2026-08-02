@@ -209,6 +209,19 @@ SYSTEM_PROMPT_LEAK_PATTERNS = [
     r"(?i)(?:me\s*programaron\s*(?:para|como)|fui\s*(?:diseñado|programado)\s*(?:para|como))",
     r"(?i)(?:contexto\s*de\s*sesión|id_del_usuario\s*=|user_id\s*=)",
     r"(?i)(?:CONTEXTO\s+DE\s+SESIÓN|MEMORIA_HERRAMIENTAS)",
+    # Fragmentos textuales del system prompt interno (no aparecen en respuestas legítimas)
+    r"(?i)(?:eres\s+un\s+asistente\s+de\s+soporte\s+para\s+masco)",
+    r"(?i)(?:regla\s+de\s+distinción\s+de\s+herramientas)",
+    r"(?i)(?:separación\s+estricta\s+entre\s+compras\s+y\s+citas)",
+    r"(?i)(?:regla\s+de\s+validación\s+horaria\s+estricta)",
+    r"(?i)(?:prioridad\s+de\s+herramientas)",
+    r"(?i)(?:regla\s+de\s+negociación\s+horaria)",
+    r"(?i)(?:reglas\s+de\s+formato\s+críticas)",
+    r"(?i)(?:la\s+fecha\s+de\s+hoy\s+es)",
+    r"(?i)(?:usuario\s+autenticado\s+que\s+está\s+chateando)",
+    r"(?i)(?:respuesta\s+del\s+modelo\s+contiene\s+fugas)",
+    r"(?i)(?:no\s+usas\s+la\s+etiqueta\s+<think>)",
+    r"(?i)(?:asistente\s+de\s+masco\s*)?:\s*(?:reglas\s+de\s+moneda)",
 ]
 
 SYSTEM_PROMPT_LEAK_COMPILED = [re.compile(p) for p in SYSTEM_PROMPT_LEAK_PATTERNS]
@@ -250,9 +263,11 @@ def detectar_leak_system_prompt(respuesta: str) -> bool:
 
 
 def sanitizar_respuesta(respuesta: str) -> str:
-    """Limpia la respuesta del modelo si contiene fugas de system prompt."""
+    """Si la respuesta del modelo contiene fugas del system prompt,
+    la reemplaza completa por un mensaje seguro (no se filtra nada)."""
     if not respuesta:
         return respuesta
-    for pattern in SYSTEM_PROMPT_LEAK_COMPILED:
-        respuesta = pattern.sub("[información interna removida por seguridad]", respuesta)
+    if detectar_leak_system_prompt(respuesta):
+        return ("Lo siento, no puedo compartir información interna del sistema. "
+                "¿En qué más puedo ayudarte con MascoTico?")
     return respuesta

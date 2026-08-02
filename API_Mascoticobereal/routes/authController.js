@@ -79,7 +79,13 @@ router.post('/refresh', csrfProtection, async (req, res) => {
  */
  router.post('/resetear', csrfProtection, async (req, res) => {
     const { token, nuevaContraseña } = req.body;
+    if (!token || !nuevaContraseña) {
+      return res.status(400).json({ error: 'Token y nueva contraseña son requeridos' });
+    }
     const response = await userService.resetearPassword(token, nuevaContraseña);
+    if (!response) {
+      return res.status(400).json({ error: 'Token inválido o expirado' });
+    }
     res.json(response);
   });
 

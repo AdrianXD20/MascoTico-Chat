@@ -28,29 +28,22 @@ const usuarioLogin = [
 ];
 
 const mascotaCrear = [
-  body('nombre').trim().notEmpty().withMessage('El nombre de la mascota es obligatorio'),
-  body('especie').optional().trim(),
-  body('raza').optional().trim(),
-  body('color').optional().trim(),
+  body('nombre').trim().isIn(TIPOS_MASCOTA).withMessage('La especie debe ser Perro, Gato, Roedores o Reptiles'),
   validar,
 ];
 
 const mascotaActualizar = [
   param('id').isInt({ min: 1 }).withMessage('ID de mascota inválido'),
-  body('nombre').optional().trim().notEmpty().withMessage('El nombre no puede estar vacío'),
-  body('especie').optional().trim(),
-  body('raza').optional().trim(),
-  body('color').optional().trim(),
+  body('nombre').trim().isIn(TIPOS_MASCOTA).withMessage('La especie debe ser Perro, Gato, Roedores o Reptiles'),
   validar,
 ];
 
 const citaCrear = [
   body('id_veterinario').isInt({ min: 1 }).withMessage('ID de veterinario inválido'),
   body('fecha_cita').matches(FECHA_REGEX).withMessage('Fecha inválida (YYYY-MM-DD)'),
-  body('hora_cita').matches(HORA_REGEX).withMessage('Hora inválida (HH:MM)'),
+  body('hora').matches(HORA_REGEX).withMessage('Hora inválida (HH:MM)'),
   body('razon').trim().notEmpty().withMessage('El motivo es obligatorio'),
-  body('mascota').isInt({ min: 1 }).withMessage('ID de mascota inválido'),
-  body('cliente').isInt({ min: 1 }).withMessage('ID de cliente inválido'),
+  body('mascota').isInt({ min: 1 }).withMessage('ID de especie de mascota inválido'),
   body('tipo_mascota').optional().isIn(TIPOS_MASCOTA).withMessage('Tipo de mascota inválido'),
   validar,
 ];

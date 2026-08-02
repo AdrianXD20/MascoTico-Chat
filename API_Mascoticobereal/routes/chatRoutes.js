@@ -11,11 +11,25 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (!file.mimetype.startsWith('audio/')) {
-      return cb(new Error('Solo archivos de audio son permitidos'), false);
+      const err = new Error('Solo archivos de audio son permitidos');
+      err.status = 400;
+      return cb(err, false);
     }
     cb(null, true);
   }
 });
+
+// Convierte errores de multer/fileFilter en respuestas 4xx limpias (no 500)
+function manejarErrorMulter(err, req, res, next) {
+  if (err instanceof multer.MulterError) {
+    const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    return res.status(status).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'El archivo es demasiado grande (máximo 10MB)' : 'Error al subir el archivo' });
+  }
+  if (err) {
+    return res.status(err.status || 400).json({ error: err.message || 'Archivo inválido' });
+  }
+  next();
+}
 
 // Middleware para validar magic bytes de audio
 function verificarMagicBytesAudio(req, res, next) {
@@ -156,6 +170,6 @@ router.delete('/chat/conversaciones/:conversation_id', verifyToken, chatControll
  * 500:
  * description: Error al transcribir
  */
-router.post('/chat/transcribir', verifyToken, upload.single('audio'), verificarMagicBytesAudio, chatController.transcribirAudio);
+router.post('/chat/transcribir', verifyToken, upload.single('audio'), verificarMagicBytesAudio, chatController.transcribirAudio, manejarErrorMulter);
 
 module.exports = router;

@@ -5,6 +5,7 @@ Expone endpoints REST que Node.js consume para el chat con memoria persistente.
 
 import json
 import os
+import re
 import time
 from fastapi import FastAPI, HTTPException, UploadFile, File, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,7 +44,7 @@ from datetime import datetime
 # CONFIGURACIÓN
 # ─────────────────────────────────────────────
 
-MODEL = "qwen3:4b"
+MODEL = "qwen3:1.7b"
 MEMORIA_HERRAMIENTAS_PREFIX = "[Memoria interna para agendamiento — no mostrar al usuario]"
 
 app = FastAPI(title="MascoTico AI Agent", version="1.0.0")
@@ -94,7 +95,6 @@ class ChatResponse(BaseModel):
     respuesta:       str
     es_nueva_sesion: bool
     agente_usado:    str              # agente que procesó la solicitud: "rag" | "transaccional" | "fuera_dominio"
-    contexto_rag:    str | None = None  # chunks recuperados de ChromaDB (solo cuando agente_usado == "rag")
 
 
 class ConversacionesResponse(BaseModel):
@@ -296,6 +296,7 @@ def chat(request: Request, req: ChatRequest):
 - Cuando necesites llamar a "agendar_cita", SIEMPRE usa id_usuario = {user_id}
 - REGLA DE ORO: Antes de agendar, ejecuta "buscar_veterinarios_filtrados" con la especie y hora para ver quién está disponible.
 - NUNCA inventes, cambies ni omitas el ID de usuario. Es el único ID válido para esta sesión.
+- NO uses la etiqueta <think> ni razones en voz alta; responde directamente.
 """
         guardar_mensaje(conversation_id, user_id, "system", system_prompt)
 
@@ -323,6 +324,26 @@ def chat(request: Request, req: ChatRequest):
         intencion = "transaccional"  # fallback seguro: al menos puede usar tools
 
     # ── Delegar al agente especialista correspondiente ──
+    # Override determinista de intencion (el modelo chico puede fallar)
+    if re.search(r"\b(comprar|compra|producto|productos|carrito|precio|precios|venta|pagar|pago|cuesta)\b", req.mensaje, re.IGNORECASE):
+        intencion = "transaccional"
+        print("[Router] Override determinista -> transaccional (senal de compra)")
+    elif re.search(r"\b(buscar|busco|busca|encuentra|encuentro|consigue)\b.*\b(veterinari[oa]s?)\b", req.mensaje, re.IGNORECASE | re.DOTALL):
+        intencion = "transaccional"
+        print("[Router] Override determinista -> transaccional (busqueda de veterinario)")
+    elif re.search(r"(agendar|agenda|reservar|reserva|sacar\s+(?:una\s+)?cita|nueva\s+cita|quiero\s+(?:una\s+)?cita|hacer\s+(?:una\s+)?cita|una\s+cita)", req.mensaje, re.IGNORECASE):
+        intencion = "transaccional"
+        print("[Router] Override determinista -> transaccional (senal de cita)")
+    elif re.search(r"\b(s[ií]|dale|confirmo|adelante|ok|perfecto|ese|listo|bueno|v[áa]mosle)\b", req.mensaje, re.IGNORECASE) and any(
+        (m.get("role") == "system" and MEMORIA_HERRAMIENTAS_PREFIX in (m.get("content") or ""))
+        or "<render_veterinario" in (m.get("content") or "")
+        or "<render_cita" in (m.get("content") or "")
+        or "<render_productos" in (m.get("content") or "")
+        for m in historial
+    ):
+        intencion = "transaccional"
+        print("[Router] Override determinista -> transaccional (confirmacion de flujo en curso)")
+
     memoria_herramientas = {}
     contexto_rag = None
 
@@ -370,7 +391,6 @@ def chat(request: Request, req: ChatRequest):
         respuesta=respuesta,
         es_nueva_sesion=es_nueva,
         agente_usado=intencion,        # nuevo
-        contexto_rag=contexto_rag,     # nuevo (None si no fue agente RAG)
     )
 
 

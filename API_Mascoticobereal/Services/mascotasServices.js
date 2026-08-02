@@ -3,7 +3,7 @@ const Mascota = require('../Models/mascotaModel'); // Importar el modelo
 class mascotasServices {
   
   _sanitizar(valor) {
-    if (typeof valor !== 'string') return valor;
+    if (typeof valor !== 'string') return '';
     if (valor.length > 1000) valor = valor.slice(0, 1000);
     return valor
       .replace(/<[^>]*>/g, '')
@@ -15,12 +15,9 @@ class mascotasServices {
   }
 
   _sanitizarObjeto(obj) {
-    const campos = ['nombre', 'raza', 'especie', 'color', 'tipo', 'edad', 'peso', 'condiciones_medicas'];
     const sanitizado = {};
-    for (const key of Object.keys(obj)) {
-      if (campos.includes(key)) {
-        sanitizado[key] = this._sanitizar(obj[key]);
-      }
+    if (typeof obj.nombre === 'string') {
+      sanitizado.nombre = this._sanitizar(obj.nombre);
     }
     return sanitizado;
   }

@@ -42,7 +42,7 @@ def buscar_veterinarios_por_mascota(tipo_mascota: str) -> list[dict]:
             }]
 
         query = """
-            SELECT v.id, v.nombre, v.direccion, v.calificacion, v.celular, m.nombre as mascota
+            SELECT v.id, v.nombre, v.direccion, v.calificacion, v.celular, v.hora_apertura, v.hora_cierre, m.nombre as mascota
             FROM veterinarios v
             JOIN mascotas m ON v.mascota = m.id
             WHERE m.nombre = %s
@@ -52,6 +52,9 @@ def buscar_veterinarios_por_mascota(tipo_mascota: str) -> list[dict]:
         results = cursor.fetchall()
         if not results:
             return [{"mensaje": f"No se encontraron veterinarios disponibles especializados en {especie_encontrada} en este momento."}]
+        for r in results:
+            r["hora_apertura"] = _format_hora(r["hora_apertura"])
+            r["hora_cierre"] = _format_hora(r["hora_cierre"])
         return results
     except Exception as e:
         return [{"error": str(e)}]
@@ -256,6 +259,18 @@ def agendar_cita(id_usuario: int, fecha_cita: str = None, razon: str = "Consulta
         vet = cursor.fetchone()
         if not vet:
             return {"error": f"El veterinario con ID {id_veterinario} no existe."}
+        # Validación de horario: la hora de la cita debe estar dentro del horario del veterinario
+        try:
+            hora_solicitada = _parse_hora(hora)
+        except Exception:
+            return {"error": f"La hora '{hora}' no es válida. Usa el formato HH:MM (ejemplo: 16:00)."}
+        cursor.execute("SELECT hora_apertura, hora_cierre FROM veterinarios WHERE id = %s", (id_veterinario,))
+        horario = cursor.fetchone()
+        if horario and horario["hora_apertura"] is not None and horario["hora_cierre"] is not None:
+            apertura = _parse_hora(_format_hora(horario["hora_apertura"]))
+            cierre = _parse_hora(_format_hora(horario["hora_cierre"]))
+            if not (apertura <= hora_solicitada <= cierre):
+                return {"error": f"El veterinario {vet['nombre']} atiende de {_format_hora(horario['hora_apertura'])} a {_format_hora(horario['hora_cierre'])}. La hora {hora} está fuera de su horario de atención. Por favor elige otra hora."}
         query = """
             INSERT INTO citas (id_usuario, id_veterinario, fecha_cita, hora, razon, mascota)
             VALUES (%s, %s, %s, %s, %s, %s)

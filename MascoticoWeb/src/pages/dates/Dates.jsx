@@ -48,12 +48,11 @@ export default function Dates() {
       }
 
       const nuevaCita = {
-        id_usuario:     userId,
         id_veterinario: 1,
         fecha_cita:     "2026-07-01",
         hora:           "16:00",
         razon:          "Chequeo Preventivo de Prueba",
-        mascota:        "Perro"
+        mascota:        1
       };
 
       await axiosInstance.post('/citas', nuevaCita);

@@ -14,14 +14,14 @@ const transporter = nodemailer.createTransport({
 });
 
 // Verificar si la hora de la cita está dentro del horario disponible
-const verificarDisponibilidad = async (id_veterinario, fecha_cita, hora_cita) => {
+const verificarDisponibilidad = async (id_veterinario, fecha_cita, hora) => {
     const disponibilidad = await DisponibilidadVeterinario.findOne({ 
         where: { id_veterinario, fecha: fecha_cita } 
     });
 
     if (!disponibilidad) return false;
 
-    return hora_cita >= disponibilidad.hora_inicio && hora_cita <= disponibilidad.hora_fin;
+    return hora >= disponibilidad.hora_inicio && hora <= disponibilidad.hora_fin;
 };
 
 const _filtrarCamposCita = (datos) => {
@@ -37,10 +37,10 @@ const _filtrarCamposCita = (datos) => {
 
 // Agendar una nueva cita
 const agendarCita = async (data) => {
-    const { id_veterinario, fecha_cita, hora_cita } = data;
+    const { id_veterinario, fecha_cita, hora } = data;
 
     // Verificar disponibilidad
-    const disponible = await verificarDisponibilidad(id_veterinario, fecha_cita, hora_cita);
+    const disponible = await verificarDisponibilidad(id_veterinario, fecha_cita, hora);
     if (!disponible) throw new Error('Horario no disponible');
 
     const cita = await Cita.create(_filtrarCamposCita(data));
@@ -52,7 +52,7 @@ const agendarCita = async (data) => {
             from: process.env.email,
             to: vet.email,
             subject: 'Nueva solicitud de cita',
-            text: `Tienes una nueva solicitud de cita para el ${fecha_cita} a las ${hora_cita}.`
+            text: `Tienes una nueva solicitud de cita para el ${fecha_cita} a las ${hora}.`
         });
     }
 

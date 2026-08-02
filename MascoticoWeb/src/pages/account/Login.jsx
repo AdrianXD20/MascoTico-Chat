@@ -24,7 +24,7 @@ function Login() {
       });
 
       // El back responde { JWT, user } — no { token }
-      const { JWT, user } = response.data;
+      const { JWT, refreshToken, user } = response.data;
 
       if (!JWT) {
         setError("Respuesta inválida del servidor");
@@ -33,6 +33,7 @@ function Login() {
 
       // Guardar token y datos del usuario
       localStorage.setItem('jwt', JWT);
+      if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.removeItem('chat_conversation_id');
 

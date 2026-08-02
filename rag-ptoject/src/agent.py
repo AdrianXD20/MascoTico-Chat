@@ -28,7 +28,7 @@ from tools import (
 # MODELO
 # ─────────────────────────────────────────────
 
-MODEL = "qwen3:4b"
+MODEL = "qwen3:1.7b"
 
 # ─────────────────────────────────────────────
 # DEFINICIÓN DE HERRAMIENTAS PARA EL LLM
@@ -263,7 +263,7 @@ def run_agent(user_message: str) -> str:
 
     print("\n[Agente] Enviando mensaje al LLM...\n")
 
-    response = ollama.chat(model=MODEL, messages=messages, tools=TOOLS, think=False)
+    response = ollama.chat(model=MODEL, messages=messages, tools=TOOLS, think=False, options={"num_ctx": 4096, "num_predict": 700})
     message  = response["message"]
 
     if not message.get("tool_calls"):
@@ -302,7 +302,7 @@ def run_agent(user_message: str) -> str:
             "content": json.dumps(result, ensure_ascii=False, default=str)
         })
 
-    final = ollama.chat(model=MODEL, messages=messages, tools=TOOLS, think=False)
+    final = ollama.chat(model=MODEL, messages=messages, tools=TOOLS, think=False, options={"num_ctx": 4096, "num_predict": 700})
     return final["message"]["content"]
 
 

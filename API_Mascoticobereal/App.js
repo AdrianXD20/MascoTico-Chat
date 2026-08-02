@@ -72,25 +72,29 @@ app.use((req, res, next) => {
   next();
 });
 
-const allowed = [
-    'https://AdrianXD20.github.io',
+const isProduction = process.env.NODE_ENV === 'production';
+
+const devOrigins = [
     'http://127.0.0.1:5501',
     'http://127.0.0.1:5500',
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:5174',
+    'http://192.168.0.104:8081',
+];
+
+const prodOrigins = [
+    'https://AdrianXD20.github.io',
     'https://api-mascoticos.onrender.com',
     'https://api-mascoticobereal.onrender.com',
     'https://mascotico-chat-web.onrender.com',
     'https://mascotico-chat.onrender.com',
-    /*IP de Alexander*/
-    'http://192.168.0.104:8081',/*IP de Frenks*/
-    'https://mascotico-luna.vercel.app',/*MascoTico WEB*/
-    'https://mascotico-luna-pjzx81ixt-alexyah064s-projects.vercel.app', /*Front de Admin */
+    'https://mascotico-luna.vercel.app',
+    'https://mascotico-luna-pjzx81ixt-alexyah064s-projects.vercel.app',
     'https://mascotico-web.vercel.app',
-    'https://mascotico-chat-web.onrender.com',
-    'https://mascotico-chat.onrender.com',
 ];
+
+const allowed = isProduction ? prodOrigins : [...prodOrigins, ...devOrigins];
 
 app.use(cors({
     origin: function (origin, callback) {
@@ -103,6 +107,13 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
+
+app.use((err, req, res, next) => {
+    if (err && err.message === 'No permitido por CORS') {
+        return res.status(403).json({ error: 'Origen no permitido por CORS' });
+    }
+    next(err);
+});
 
 // Límite general para toda la API
 const limiterGeneral = rateLimit({

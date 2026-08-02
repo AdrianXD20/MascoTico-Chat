@@ -63,7 +63,7 @@ class ChatController {
 
             const response = await axios.post(`${PYTHON_API}/chat`, payload, {
                 headers: { 'Content-Type': 'application/json', ..._apiHeaders() },
-                timeout: 30000
+                timeout: 50000
             });
 
             return res.status(200).json(response.data);

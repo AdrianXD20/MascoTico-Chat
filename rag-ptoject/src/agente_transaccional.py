@@ -22,7 +22,7 @@ from tools import (
     consultar_stock_producto,         # necesario para resolver id_producto
 )
 
-MODEL = "qwen3:4b"
+MODEL = "qwen3:1.7b"
 MAX_TOOL_ROUNDS = 6
 MEMORIA_HERRAMIENTAS_PREFIX = "[Memoria interna para agendamiento — no mostrar al usuario]"
 
@@ -174,6 +174,8 @@ AVAILABLE_FUNCTIONS = {
 SYSTEM_PROMPT_TRANSACCIONAL = """Eres el especialista Transaccional de MascoTico. Tu única función es
 agendar citas, procesar compras y consultar información específica del usuario autenticado.
 
+IMPORTANTE: NO uses la etiqueta <think> ni razones en voz alta. Responde directamente.
+
 Reglas:
 - Si el usuario decide agendar una cita en un horario en el que ningún veterinario puede, dile que el horario no está disponible.
 - CUANDO el usuario confirme o acepte agendar (diga "sí", "dale", "confirmo", "ese está bien", etc.) DESPUÉS de que le mostraste opciones de veterinarios, tu ÚNICA acción permitida es llamar a la función agendar_cita usando function calling. NO respondas con texto de confirmación sin haber llamado primero a la herramienta.
@@ -217,6 +219,7 @@ REGLAS DE AGENDAMIENTO DE CITAS:
 8. "El primero" → id del primero. "El segundo" → id del segundo. etc.
 9. Tras agendar_cita exitoso, añade <render_cita>.
 10. Si hay error, informa sin mentir que la cita fue agendada.
+11. CONVIERTE SIEMPRE las horas habladas a formato HH:MM de 24 horas al llamar las herramientas (ej: "6 de la tarde" = 18:00, "mediodía" = 12:00, "3 de la tarde" = 15:00).
 
 SEPARACIÓN ESTRICTA ENTRE COMPRAS Y CITAS:
 - Si el usuario dice "quiero comprar X": usa consultar_stock_producto o buscar_productos_por_categoria para resolver el id_producto, luego llama a realizar_compra. NUNCA preguntes por fecha, hora ni veterinario.
@@ -249,8 +252,9 @@ def _limpiar_respuesta_llm(texto: str) -> str:
     patrones = [
         r"<(?:buscar_veterinarios_filtrados|agendar_cita|buscar_veterinarios_por_mascota)[^>]*/?>\s*",
         r"(?:buscar_veterinarios_filtrados|agendar_cita)\s+\w+=\"[^\"]*\"(?:\s+\w+=\"[^\"]*\")*\s*/?>\s*",
-        # Limpiar bloques <tools>...</tools> que el LLM a veces escupe como texto
+        # Limpiar bloques <tools>...</tools> y <think>...</think> que el LLM a veces escupe
         r"<tools>.*?</tools>",
+        r"<think>.*?</think>",
     ]
     for patron in patrones:
         texto = re.sub(patron, "", texto, flags=re.IGNORECASE | re.DOTALL)
@@ -301,6 +305,43 @@ def _extraer_veterinarios_de_resultado(result) -> list[dict]:
         elif isinstance(item, dict) and item.get("alternativas"):
             vets.extend(v for v in item["alternativas"] if isinstance(v, dict) and v.get("id"))
     return vets
+
+
+def _construir_render_vets(vets: list) -> list[str]:
+    tags = []
+    for v in vets:
+        if not isinstance(v, dict) or not v.get("id"):
+            continue
+        tags.append(
+            f'<render_veterinario id="{v["id"]}" nombre="{v.get("nombre", "")}" '
+            f'hora_apertura="{v.get("hora_apertura", "?")}" hora_cierre="{v.get("hora_cierre", "?")}" />'
+        )
+    return tags
+
+
+def _construir_render_productos(prods: list) -> list[str]:
+    tags = []
+    for p in prods:
+        if not isinstance(p, dict) or not p.get("nombre"):
+            continue
+        tags.append(
+            f'<render_productos nombre="{p["nombre"]}" marca="{p.get("marca", "")}" '
+            f'precio="{p.get("precio", 0)}" stock="{p.get("stock", 0)}" />'
+        )
+    return tags
+
+
+def _anexar_render_pre_consulta(texto: str, render_tags: list[str], es_cita: bool, es_compra: bool, memoria: dict, vets_pre: list) -> str:
+    if not render_tags or not texto:
+        return texto
+    if es_cita and ("<render_veterinario" in texto or "<render_cita" in texto):
+        return texto
+    if es_compra and ("<render_productos" in texto or "<render_compra" in texto):
+        return texto
+    if vets_pre and not memoria.get("veterinarios_recientes"):
+        memoria["veterinarios_recientes"] = vets_pre
+        print(f"[AgenteTransaccional] Veterinarios del pre-consulta guardados en memoria para agendamiento.")
+    return texto + "\n\n" + "\n".join(render_tags)
 
 
 def _sanear_render_cita(texto: str, cita_confirmada: bool) -> str:
@@ -433,15 +474,225 @@ def _ejecutar_herramienta(fn_name: str, arguments: dict, user_id: int, historial
 # FUNCIÓN PRINCIPAL DEL AGENTE
 # ─────────────────────────────────────────────
 
+_PATRON_CITA = re.compile(
+    r"(agendar|agenda|reservar|reserva|sacar\s+(?:una\s+)?cita|nueva\s+cita|quiero\s+(?:una\s+)?cita|hacer\s+(?:una\s+)?cita|una\s+cita|buscar\s+(?:un|unos|una|un)\s+veterinari|busco\s+(?:un|unos|una|un)\s+veterinari)",
+    re.IGNORECASE,
+)
+
+_PATRON_COMPRA = re.compile(
+    r"\b(comprar|compra|producto|productos|carrito|precio|precios|vender|venta|cuesta)\b",
+    re.IGNORECASE,
+)
+
+
+def _extraer_mascota_cita(texto: str) -> str | None:
+    t = texto.lower()
+    mapa = {
+        "perro": "Perro", "perritos": "Perro", "perrito": "Perro",
+        "gato": "Gato", "gatos": "Gato", "gatito": "Gato", "gatitos": "Gato",
+        "roedores": "Roedores", "roedor": "Roedores", "hamster": "Roedores", "hámster": "Roedores",
+        "cobayo": "Roedores", "cuyo": "Roedores", "conejo": "Roedores", "coneja": "Roedores",
+        "reptiles": "Reptiles", "reptil": "Reptiles", "serpiente": "Reptiles", "iguana": "Reptiles",
+        "tortuga": "Reptiles",
+    }
+    for clave, valor in mapa.items():
+        if clave in t:
+            return valor
+    return None
+
+
+def _extraer_hora_cita(texto: str) -> str | None:
+    """Extrae una hora en formato HH:MM desde texto en español (ej. 'a las 6 de la tarde')."""
+    t = texto.lower()
+    m = re.search(r"\b(\d{1,2}):(\d{2})\b", t)
+    if m:
+        return f"{int(m.group(1)):02d}:{m.group(2)}"
+    if "mediodia" in t or "mediodía" in t:
+        return "12:00"
+    m = re.search(r"\b(\d{1,2})\s*(?:de la\s+)?(tarde|noche)\b", t)
+    if m:
+        hora = int(m.group(1))
+        if hora < 12:
+            hora += 12
+        return f"{hora:02d}:00"
+    m = re.search(r"\b(\d{1,2})\s*(?:de la\s+)?(manana|mañana|madrugada)\b", t)
+    if m:
+        return f"{int(m.group(1)) % 12:02d}:00"
+    m = re.search(r"\b(\d{1,2})\s*(?:p\.?m\.?)\b", t)
+    if m:
+        return f"{int(m.group(1)) % 12 + 12:02d}:00"
+    m = re.search(r"\b(\d{1,2})\s*(?:a\.?m\.?)\b", t)
+    if m:
+        return f"{int(m.group(1)) % 12:02d}:00"
+    return None
+
+
+def _extraer_fecha_cita(texto: str) -> str | None:
+    """Devuelve la fecha de la cita en YYYY-MM-DD desde expresiones en espanol."""
+    from datetime import date, timedelta
+    t = texto.lower()
+    hoy = date.today()
+    if "pasado manana" in t or "pasado mañana" in t:
+        return (hoy + timedelta(days=2)).isoformat()
+    if "manana" in t or "mañana" in t:
+        return (hoy + timedelta(days=1)).isoformat()
+    if "hoy" in t or "esta tarde" in t or "esta noche" in t:
+        return hoy.isoformat()
+    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", texto)
+    if m:
+        return m.group(0)
+    m = re.search(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b", texto)
+    if m:
+        d, mes, anio = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        if anio < 100:
+            anio += 2000
+        return f"{anio:04d}-{mes:02d}-{d:02d}"
+    return None
+
+
+def _texto_sin_disponibilidad(info: dict, tipo: str, hora: str) -> str:
+    alt = info.get("alternativas") or []
+    rangos = sorted(set(
+        f"{a.get('hora_apertura', '?')} a {a.get('hora_cierre', '?')}"
+        for a in alt if isinstance(a, dict) and a.get("hora_apertura")
+    ))
+    texto = f"Lo siento, no hay veterinarios disponibles para {tipo} a las {hora}."
+    if rangos:
+        texto += " El horario de atención de los veterinarios es " + "; ".join(rangos) + "."
+    texto += " ¿Te gustaría elegir otra hora?"
+    return texto
+
+
+def _agendar_cita_automatica(historial: list[dict], user_id: int, memoria: dict) -> str | None:
+    """Si el usuario confirmo agendar y el modelo no llamo la herramienta, agenda directamente."""
+    if memoria.get("cita_agendada"):
+        return None
+    msgs_user = [m["content"] for m in historial if m.get("role") == "user"]
+    if not msgs_user:
+        return None
+    ultima = msgs_user[-1].lower()
+    confirmaciones = ("si", "sí", "dale", "confirmo", "confirmame", "adelante", "ok", "perfecto",
+                      "listo", "bueno", "agendame", "solicita", "vamos", "vámonos", "acepto", "de acuerdo")
+    if not any(c in ultima for c in confirmaciones):
+        return None
+
+    hay_vets = any("<render_veterinario" in (m.get("content") or "") for m in historial)
+    hay_memoria = any(MEMORIA_HERRAMIENTAS_PREFIX in (m.get("content") or "") for m in historial)
+    if not hay_vets and not hay_memoria and not memoria.get("veterinarios_recientes"):
+        return None
+
+    vets = _veterinarios_desde_historial(historial) or memoria.get("veterinarios_recientes") or []
+    if not vets:
+        return None
+
+    seleccion = " ".join(msgs_user[-4:]).lower()
+    id_vet = None
+    if any(x in seleccion for x in ("primero", "primera", "1er", "1ro")):
+        id_vet = vets[0]["id"]
+    elif any(x in seleccion for x in ("segundo", "segunda", "2do", "2ro")) and len(vets) > 1:
+        id_vet = vets[1]["id"]
+    elif any(x in seleccion for x in ("tercero", "tercera", "3ro", "3er")) and len(vets) > 2:
+        id_vet = vets[2]["id"]
+    if id_vet is None:
+        for v in vets:
+            if v.get("nombre", "").lower() in seleccion:
+                id_vet = v["id"]
+                break
+    if id_vet is None and len(vets) == 1:
+        id_vet = vets[0]["id"]
+    if id_vet is None:
+        return None
+
+    hora = None
+    for m in reversed(msgs_user[-4:]):
+        hora = _extraer_hora_cita(m)
+        if hora:
+            break
+    if not hora:
+        hora = "09:00"
+    tipo = None
+    for m in reversed(msgs_user[-4:]):
+        tipo = _extraer_mascota_cita(m)
+        if tipo:
+            break
+    fecha = _extraer_fecha_cita(" ".join(msgs_user[-4:]))
+    if not tipo or not fecha:
+        return None
+
+    result = agendar_cita(id_usuario=user_id, id_veterinario=id_vet, fecha_cita=fecha,
+                          hora=hora, razon="Consulta general", tipo_mascota=tipo)
+    if isinstance(result, dict) and result.get("error"):
+        print(f"[AgenteTransaccional] Auto-agendamiento rechazado por validacion: {result['error']}")
+        return None
+
+    nombre_vet = next((v.get("nombre", "") for v in vets if v.get("id") == id_vet), result.get("veterinario", ""))
+    print(f"[AgenteTransaccional] Cita agendada automaticamente: id={result.get('id_cita')} vet={nombre_vet} {fecha} {hora}")
+    memoria["cita_agendada"] = True
+    return (
+        f"¡Listo! Tu cita fue agendada con {nombre_vet} para el {fecha} a las {hora}.\n"
+        f'<render_cita id_cita="{result.get("id_cita", "")}" veterinario="{nombre_vet}" fecha="{fecha}" hora="{hora}" mascota="{tipo}" razon="Consulta general" />'
+    )
+
+
 def ejecutar_agente_transaccional(historial: list[dict], user_id: int, conversation_id: str, tool_validator=None) -> tuple[str, dict]:
     messages = [{"role": "system", "content": SYSTEM_PROMPT_TRANSACCIONAL}] + list(historial)
     memoria_herramientas: dict = {}
     cita_confirmada = False
 
+    # ── Pre-consulta determinista de disponibilidad ─────────────────
+    # Garantiza que buscar_veterinarios_filtrados SIEMPRE se ejecute y que el
+    # horario se valide contra el de los veterinarios, incluso si el modelo
+    # no llama la herramienta por sí solo.
+    ultimo_user = next((m["content"] for m in reversed(historial) if m.get("role") == "user"), "")
+    tipo = _extraer_mascota_cita(ultimo_user)
+    hora = _extraer_hora_cita(ultimo_user)
+
+    datos_pre = []
+    render_extra: list[str] = []
+    vets_pre: list[dict] = []
+    pre_es_cita = False
+    pre_es_compra = False
+    pre_sin_disponibilidad = None
+
+    # 1) Disponibilidad de veterinarios (cita o busqueda de veterinario)
+    if tipo and _PATRON_CITA.search(ultimo_user):
+        pre_es_cita = True
+        try:
+            if hora:
+                resultado_disp = buscar_veterinarios_filtrados(tipo, hora)
+                etiqueta_pre = "DISPONIBILIDAD DE VETERINARIOS YA VERIFICADA EN LA BASE DE DATOS (usa SOLO estos datos para responder y NO vuelvas a llamar la herramienta):\n" + json.dumps(resultado_disp, ensure_ascii=False, default=str)
+                print(f"[AgenteTransaccional] Disponibilidad pre-consultada: {tipo} a las {hora}")
+                vets_pre = [v for v in resultado_disp if isinstance(v, dict) and v.get("id")]
+                if not vets_pre and resultado_disp and isinstance(resultado_disp[0], dict) and resultado_disp[0].get("mensaje"):
+                    pre_sin_disponibilidad = resultado_disp[0]
+            else:
+                resultado_disp = buscar_veterinarios_por_mascota(tipo)
+                etiqueta_pre = "VETERINARIOS DISPONIBLES PARA ESTA MASCOTA (datos reales de la base de datos, usalos para responder):\n" + json.dumps(resultado_disp, ensure_ascii=False, default=str)
+                print(f"[AgenteTransaccional] Veterinarios pre-consultados: {tipo}")
+                vets_pre = [v for v in resultado_disp if isinstance(v, dict) and v.get("id")]
+            render_extra = _construir_render_vets(vets_pre)
+            datos_pre.append(etiqueta_pre)
+        except Exception as exc:
+            print(f"[AgenteTransaccional] ⚠️  Error pre-consultando disponibilidad: {exc}")
+
+    # 2) Productos (intencion de compra)
+    elif tipo and _PATRON_COMPRA.search(ultimo_user):
+        pre_es_compra = True
+        try:
+            productos = buscar_productos_por_categoria(tipo)
+            render_extra = _construir_render_productos(productos)
+            datos_pre.append("PRODUCTOS DISPONIBLES EN LA TIENDA (datos reales de la base de datos, usalos para responder):\n" + json.dumps(productos, ensure_ascii=False, default=str))
+            print(f"[AgenteTransaccional] Productos pre-consultados: {tipo}")
+        except Exception as exc:
+            print(f"[AgenteTransaccional] ⚠️  Error pre-consultando productos: {exc}")
+
+    if datos_pre:
+        messages[0] = {"role": "system", "content": SYSTEM_PROMPT_TRANSACCIONAL + "\n\n" + "\n\n".join(datos_pre)}
+
     print(f"\n[AgenteTransaccional] Enviando historial al LLM (user_id={user_id})...\n")
 
     for ronda in range(MAX_TOOL_ROUNDS):
-        response = ollama.chat(model=MODEL, messages=messages, tools=TOOLS, think=False)
+        response = ollama.chat(model=MODEL, messages=messages, tools=TOOLS, think=False, options={"num_ctx": 4096, "num_predict": 700, "temperature": 0})
         message = response["message"]
 
         tool_calls = message.get("tool_calls")
@@ -459,6 +710,14 @@ def ejecutar_agente_transaccional(historial: list[dict], user_id: int, conversat
         if not tool_calls:
             texto = _limpiar_respuesta_llm(message.get("content") or "")
             texto = _sanear_render_cita(texto, cita_confirmada)
+            if pre_sin_disponibilidad:
+                texto = _texto_sin_disponibilidad(pre_sin_disponibilidad, tipo, hora)
+            if not cita_confirmada:
+                auto = _agendar_cita_automatica(historial, user_id, memoria_herramientas)
+                if auto:
+                    texto = auto
+                    cita_confirmada = True
+            texto = _anexar_render_pre_consulta(texto, render_extra, pre_es_cita, pre_es_compra, memoria_herramientas, vets_pre)
             return texto, memoria_herramientas
 
         print(f"[AgenteTransaccional] Tool call detectado (ronda {ronda + 1}): {len(tool_calls)} herramienta(s)\n")
@@ -507,7 +766,14 @@ def ejecutar_agente_transaccional(historial: list[dict], user_id: int, conversat
             messages.append({"role": "tool", "content": tool_content})
             guardar_mensaje(conversation_id, user_id, "tool", tool_content)
 
-    final = ollama.chat(model=MODEL, messages=messages, tools=TOOLS, think=False)
+    final = ollama.chat(model=MODEL, messages=messages, tools=TOOLS, think=False, options={"num_ctx": 4096, "num_predict": 700, "temperature": 0})
     texto = _limpiar_respuesta_llm(final["message"].get("content") or "")
     texto = _sanear_render_cita(texto, cita_confirmada)
+    if pre_sin_disponibilidad:
+        texto = _texto_sin_disponibilidad(pre_sin_disponibilidad, tipo, hora)
+    if not cita_confirmada:
+        auto = _agendar_cita_automatica(historial, user_id, memoria_herramientas)
+        if auto:
+            texto = auto
+    texto = _anexar_render_pre_consulta(texto, render_extra, pre_es_cita, pre_es_compra, memoria_herramientas, vets_pre)
     return texto, memoria_herramientas

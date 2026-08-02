@@ -89,6 +89,7 @@ const Navbar = () => {
       // No bloqueamos el logout local aunque falle la petición al backend
     } finally {
       localStorage.removeItem("jwt");
+      localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
       localStorage.removeItem("chat_conversation_id");
       setIsLoggedIn(false);

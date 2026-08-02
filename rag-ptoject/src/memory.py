@@ -14,10 +14,10 @@ from pathlib import Path
 # CONFIGURACIÓN
 # ─────────────────────────────────────────────
 
-DB_PATH = Path(__file__).parent.parent / "sessions.db"
+DB_PATH = Path(__file__).parent / "sessions" / "sessions.db"
 
 # Límite de mensajes por conversación antes de aplicar ventana deslizante
-MAX_MESSAGES = 20
+MAX_MESSAGES = 12
 
 
 # ─────────────────────────────────────────────
@@ -29,6 +29,7 @@ def init_db() -> None:
     Crea la base de datos SQLite y las tablas necesarias si no existen.
     Se llama automáticamente al importar el módulo.
     """
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(DB_PATH, timeout=10) as conn:
         # Configurar para mejor concurrencia con múltiples conexiones
         conn.execute("PRAGMA journal_mode=WAL")
