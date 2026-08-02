@@ -166,6 +166,7 @@ export default function Chat() {
   const [conversationId,  setConversationId]  = useState(getStoredConversationId);
   const [showHistory,     setShowHistory]     = useState(false);
   const [historial,       setHistorial]       = useState([]);
+  const [isLoggedIn,      setIsLoggedIn]      = useState(() => Boolean(localStorage.getItem("jwt")));
 
   const bottomRef  = useRef(null);
   const inputRef   = useRef(null);
@@ -182,12 +183,17 @@ export default function Chat() {
 
   // Mensaje de bienvenida si no hay historial
   useEffect(() => {
-    if (isOpen && messages.length === 0) {
+    if (isOpen && isLoggedIn && messages.length === 0) {
       setMessages([{
         role: "assistant",
         content: "¡Hola! 🐾 Soy el asistente de MascoTico. Puedo ayudarte con información sobre veterinarios, productos, citas y más. ¿En qué te ayudo?"
       }]);
     }
+  }, [isOpen, isLoggedIn]);
+
+  // Re-verificar sesión cada vez que se abre el chat (login/logout en la misma pestaña)
+  useEffect(() => {
+    setIsLoggedIn(Boolean(localStorage.getItem("jwt")));
   }, [isOpen]);
 
   // ── Enviar mensaje ─────────────────────────────────────────────────────────
@@ -353,7 +359,7 @@ const sendMessage = async (textoOverride) => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {!showHistory && (
+            {!showHistory && isLoggedIn && (
               <>
                 <button
                   onClick={cargarHistorial}
@@ -424,50 +430,75 @@ const sendMessage = async (textoOverride) => {
           <>
             {/* Mensajes */}
             <div className="flex-1 overflow-y-auto px-4 py-3">
-              {messages.map((msg, i) => (
-                <MessageBubble key={i} role={msg.role} content={msg.content} productos={msg.productos} cita={msg.cita} veterinarios={msg.veterinarios} />
-              ))}
-              {isLoading && <TypingIndicator />}
-              <div ref={bottomRef} />
+              {isLoggedIn ? (
+                <>
+                  {messages.map((msg, i) => (
+                    <MessageBubble key={i} role={msg.role} content={msg.content} productos={msg.productos} cita={msg.cita} veterinarios={msg.veterinarios} />
+                  ))}
+                  {isLoading && <TypingIndicator />}
+                  <div ref={bottomRef} />
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                  <MessageCircle size={40} className="mb-3 opacity-30 text-primary" />
+                  <p className="text-sm font-semibold text-gray-700">
+                    Para usar el chat necesitas iniciar sesión
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Inicia sesión para chatear con el asistente de MascoTico.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Input */}
             <div className="px-3 py-3 bg-white border-t border-gray-100 flex-shrink-0">
-              <div className="flex items-end gap-2 bg-gray-50 rounded-xl border border-gray-200 px-3 py-2 focus-within:border-primary transition-colors">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKey}
-                  placeholder="Escribe tu mensaje..."
-                  rows={1}
-                  className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 resize-none outline-none leading-5 max-h-24"
-                  style={{ minHeight: "20px" }}
-                  onInput={(e) => {
-                    e.target.style.height = "auto";
-                    e.target.style.height = Math.min(e.target.scrollHeight, 96) + "px";
-                  }}
-                />
-                <VoiceRecorder
-                  onTranscription={(texto) => {
-                    if (!texto.trim()) return;
-                    // Envío automático: usamos el texto transcrito directamente
-                    // sin pasar por el estado `input` para evitar carreras de render
-                    enviarTextoDirecto(texto.trim());
-                  }}
-                  disabled={isLoading}
-                />
+              {isLoggedIn ? (
+                <>
+                  <div className="flex items-end gap-2 bg-gray-50 rounded-xl border border-gray-200 px-3 py-2 focus-within:border-primary transition-colors">
+                    <textarea
+                      ref={inputRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKey}
+                      placeholder="Escribe tu mensaje..."
+                      rows={1}
+                      className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 resize-none outline-none leading-5 max-h-24"
+                      style={{ minHeight: "20px" }}
+                      onInput={(e) => {
+                        e.target.style.height = "auto";
+                        e.target.style.height = Math.min(e.target.scrollHeight, 96) + "px";
+                      }}
+                    />
+                    <VoiceRecorder
+                      onTranscription={(texto) => {
+                        if (!texto.trim()) return;
+                        // Envío automático: usamos el texto transcrito directamente
+                        // sin pasar por el estado `input` para evitar carreras de render
+                        enviarTextoDirecto(texto.trim());
+                      }}
+                      disabled={isLoading}
+                    />
+                    <button
+                      onClick={sendMessage}
+                      disabled={!input.trim() || isLoading}
+                      className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0 disabled:opacity-40 hover:bg-primary/90 transition-colors"
+                    >
+                      <Send size={14} className="text-white" />
+                    </button>
+                  </div>
+                  <p className="text-center text-gray-300 text-[10px] mt-1.5">
+                    Enter para enviar · Shift+Enter para nueva línea
+                  </p>
+                </>
+              ) : (
                 <button
-                  onClick={sendMessage}
-                  disabled={!input.trim() || isLoading}
-                  className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0 disabled:opacity-40 hover:bg-primary/90 transition-colors"
+                  onClick={() => navigate("/login")}
+                  className="w-full py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
                 >
-                  <Send size={14} className="text-white" />
+                  Iniciar sesión
                 </button>
-              </div>
-              <p className="text-center text-gray-300 text-[10px] mt-1.5">
-                Enter para enviar · Shift+Enter para nueva línea
-              </p>
+              )}
             </div>
           </>
         )}
