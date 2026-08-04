@@ -37,6 +37,9 @@ INJECTION_PATTERNS = [
     # Instrucciones contradictorias
     r"(?i)(?:aunque\s*te\s*(?:dije|haya\s*dicho|digan)\s*lo\s*contrario)",
     r"(?i)(?:esto\s*es\s*una\s*(?:prueba|simulación|emergencia|orden\s*superior))",
+    # Extracción del contexto recuperado / base de conocimiento
+    r"(?i)(?:imprime|muestra|repite|dime|escribe|devolv[eé]|copia|le[eé])\s*(?:textualmente|literalmente|completo|completa)?\s*(?:el\s+|todo\s+el\s+)?(?:contenido\s+(?:del\s+|de\s+tu\s+|que\s+recibiste\s+del\s+)?)?(?:contexto\s+(?:rag\s+)?|base\s+de\s+conocimiento|documento\s+interno)",
+    r"(?i)(?:contexto\s+(?:rag|recuperado)|contexto\s+que\s+recibiste|contenido\s+de\s+la\s+base\s+de\s+conocimiento|qu[eé]\s+contexto\s+(?:recibiste|tienes))",
 ]
 
 INJECTION_PATTERN_COMPILED = [re.compile(p) for p in INJECTION_PATTERNS]
@@ -222,6 +225,16 @@ SYSTEM_PROMPT_LEAK_PATTERNS = [
     r"(?i)(?:respuesta\s+del\s+modelo\s+contiene\s+fugas)",
     r"(?i)(?:no\s+usas\s+la\s+etiqueta\s+<think>)",
     r"(?i)(?:asistente\s+de\s+masco\s*)?:\s*(?:reglas\s+de\s+moneda)",
+    # Nombres de funciones internas (nunca deben aparecer en respuestas legítimas)
+    r"(?i)(?:agendar_cita|realizar_compra|buscar_veterinarios_filtrados|buscar_veterinarios_por_mascota)",
+    r"(?i)(?:consultar_citas_veterinario|consultar_ventas_usuario|buscar_productos_por_categoria|consultar_stock_producto|buscar_blogs_por_categoria|consultar_servicios_veterinario)",
+    # Reglas meta / notas de seguridad del system prompt
+    r"(?i)(?:function\s*calling|llamad[ao]\s*de\s*funci[oó]n)",
+    r"(?i)(?:no\s+ejecutar\s+herramientas|par[aá]metros\s+que\s+no\s+hayan\s+sido\s+solicitados)",
+    r"(?i)(?:etiquetas?\s+xml\s+de\s+renderizado|regla\s+de\s+desambiguaci[oó]n)",
+    r"(?i)(?:memoria\s+interna\s+para\s+agendamiento)",
+    r"(?i)(?:contexto\s+de\s+s[ií]on\s+actual|id_usuario\s+del\s+contexto\s+de\s+s[ií]on)",
+    r"(?i)(?:separaci[oó]n\s+de\s+instrucciones|jerarqu[ií]a\s+de\s+prioridad)",
 ]
 
 SYSTEM_PROMPT_LEAK_COMPILED = [re.compile(p) for p in SYSTEM_PROMPT_LEAK_PATTERNS]

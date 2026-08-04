@@ -185,6 +185,57 @@ def _limpiar_referencias_herramientas(texto: str) -> str:
     return resultado or texto
 
 
+def _normalizar_para_comparar(texto: str) -> str:
+    """Normaliza texto para comparar: minúsculas y espacios colapsados."""
+    return re.sub(r"\s+", " ", texto.lower()).strip()
+
+
+def _longest_common_substring(a: str, b: str) -> int:
+    """Longitud (en caracteres) de la subcadena común más larga entre a y b."""
+    n, m = len(a), len(b)
+    if n == 0 or m == 0:
+        return 0
+    prev = [0] * (m + 1)
+    mejor = 0
+    for i in range(1, n + 1):
+        cur = [0] * (m + 1)
+        ai = a[i - 1]
+        for j in range(1, m + 1):
+            if ai == b[j - 1]:
+                cur[j] = prev[j - 1] + 1
+                if cur[j] > mejor:
+                    mejor = cur[j]
+        prev = cur
+    return mejor
+
+
+def _detectar_regurgitacion_contexto(respuesta: str, contexto_texto: str) -> bool:
+    """Detecta si la respuesta del LLM regurgita textualmente el contexto recuperado.
+    Una respuesta legítima parafrasea; una fuga reproduce bloques verbatim del documento."""
+    if not respuesta or not contexto_texto or "Sin contexto adicional" in contexto_texto:
+        return False
+
+    resp = re.sub(r"<[^>]+>", " ", respuesta)
+    resp_norm = _normalizar_para_comparar(resp)
+    if len(resp_norm) < 60:
+        return False
+
+    chunks = [c for c in re.split(r"\n\s*---\s*\n", contexto_texto) if c.strip()]
+    for chunk in chunks:
+        chunk_norm = _normalizar_para_comparar(chunk)
+        if len(chunk_norm) < 40:
+            continue
+        if _longest_common_substring(resp_norm, chunk_norm) >= 60:
+            return True
+    return False
+
+
+_RESPUESTA_SEGURA_CONTEXTO = (
+    "Lo siento, no puedo mostrarte el contenido interno de la base de conocimiento. "
+    "¿En qué más puedo ayudarte con MascoTico?"
+)
+
+
 def ejecutar_agente_rag(mensaje_usuario: str, historial: list[dict], tool_validator=None) -> tuple[str, str]:
     """
     Ejecuta el agente RAG y devuelve una tupla (respuesta, contexto_recuperado).
@@ -245,7 +296,11 @@ Reglas:
             message["content"] = _limpiar_texto_rag(message.get("content") or "")
 
     if not tool_calls:
-        return _limpiar_referencias_herramientas(_limpiar_texto_rag(message.get("content", ""))), contexto_texto
+        respuesta = _limpiar_referencias_herramientas(_limpiar_texto_rag(message.get("content", "")))
+        if _detectar_regurgitacion_contexto(respuesta, contexto_texto):
+            print("[AgenteRAG] ⚠️  Regurgitación de contexto RAG detectada — respuesta bloqueada")
+            return _RESPUESTA_SEGURA_CONTEXTO, contexto_texto
+        return respuesta, contexto_texto
 
     messages.append({"role": "assistant", "content": message.get("content", ""), "tool_calls": tool_calls})
     for tool_call in tool_calls:
@@ -267,4 +322,8 @@ Reglas:
         messages.append({"role": "tool", "content": json.dumps(result, ensure_ascii=False, default=str)})
 
     final = ollama.chat(model=MODEL, messages=messages, tools=TOOLS_RAG, think=False, options={"num_ctx": 4096, "num_predict": 800, "temperature": 0})
-    return _limpiar_referencias_herramientas(_limpiar_texto_rag(final["message"].get("content", ""))), contexto_texto
+    respuesta = _limpiar_referencias_herramientas(_limpiar_texto_rag(final["message"].get("content", "")))
+    if _detectar_regurgitacion_contexto(respuesta, contexto_texto):
+        print("[AgenteRAG] ⚠️  Regurgitación de contexto RAG detectada — respuesta bloqueada")
+        return _RESPUESTA_SEGURA_CONTEXTO, contexto_texto
+    return respuesta, contexto_texto
