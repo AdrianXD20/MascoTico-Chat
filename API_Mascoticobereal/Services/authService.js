@@ -171,7 +171,10 @@ class UserService {
       auth: { 
         user: process.env.email, 
         pass: process.env.email_password 
-      }
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
     });
   
     const mailOptions = {
@@ -181,14 +184,12 @@ class UserService {
       text: `Usa el siguiente enlace para restablecer tu contraseña: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`
     };
   
-    try {
-      let info = await transporter.sendMail(mailOptions);
-      console.log('Correo enviado: ', info.response);
-      return { message: 'Correo enviado correctamente' };
-    } catch (error) {
+    // Envío no bloqueante: la respuesta no depende del estado del SMTP
+    transporter.sendMail(mailOptions).catch((error) => {
       console.error('Error al enviar correo: ', error);
-      return { error: 'No se pudo enviar el correo' };
-    }
+    });
+  
+    return { message: 'Si el email existe, se enviará un correo' };
   }
 
   async obtenerUsuarios(page, limit){
@@ -244,11 +245,8 @@ class UserService {
     }
 
     const update = await User.update(camposPermitidos, { where: { id: Id } });
-    if (update > 0) {
-      const updated = await User.findByPk(Id);
-      return updated ? this._sanitizeUser(updated) : null;
-    }
-    return null;
+    const updated = await User.findByPk(Id);
+    return updated ? this._sanitizeUser(updated) : null;
   }
 
   async revocarRefreshTokens(userId) {

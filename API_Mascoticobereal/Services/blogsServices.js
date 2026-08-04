@@ -64,7 +64,7 @@ class BlogsService{
                 {
                     model: Veterinario,
                     as: 'veterinario',
-                    attributes: ['nombre', 'apellido','imagen_perfil'] 
+                    attributes: ['nombre', 'imagen_perfil'] 
                 }
             ]
         });

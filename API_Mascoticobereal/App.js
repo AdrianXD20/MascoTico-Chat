@@ -155,6 +155,13 @@ const limiterRegistro = rateLimit({
   message: { message: "Has alcanzado el límite de registros. Intenta de nuevo mañana." },
 });
 
+// Límite para solicitudes de recuperación de contraseña (anti-spam de correos)
+const limiterRecuperar = rateLimit({
+  windowMs: 60 * 60 * 1000,        // 1 hora
+  max: 5,                          // máximo 5 solicitudes por IP
+  message: { message: "Demasiadas solicitudes de recuperación. Intenta de nuevo más tarde." },
+});
+
 // Límite para endpoints de escritura (mascotas, citas, ventas)
 const limiterEscritura = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -191,6 +198,7 @@ app.use(limiterGeneral);
 app.use('/login', limiterLogin);
 app.use('/veterinario/login', limiterLogin);
 app.use('/register', limiterRegistro);
+app.use('/recuperar', limiterRecuperar);
 app.use('/refresh', limiterRefresh);
 app.use('/veterinario/refresh', limiterRefresh);
 app.get('/csrf-token', limiterCsrf, generateToken);
